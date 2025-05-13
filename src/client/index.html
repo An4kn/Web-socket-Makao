@@ -15,15 +15,20 @@
         <li>after this tutorial you should be able to create a simple WebSockets app</li>
     </ul>
     <script>
-        const ws = new WebSocket('ws://localhost:8082'); //for production, use wss://
+        const ws = new WebSocket('ws://localhost:8000/ws'); //for production, use wss://
         ws.addEventListener('open', () => {
             console.log('We are connected');
-        
-        ws.send('Hey how its it going?');
+            ws.binaryType = 'arraybuffer';
+            ws.send(array);
+            const transferList = [array.buffer];
+            myWorker.postMessage({ buffer: array.buffer }, transferList);
+            
+            // ws.send('Hey how its it going?');
         });
         ws.addEventListener('message', ({data})=> {
             console.log(data);
         });
     </script>
+    <button onclick="sendExampleMove()">Wyślij przykładowy ruch</button>
 </body>
-</html>
+</html> 

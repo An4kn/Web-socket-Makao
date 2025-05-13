@@ -49,7 +49,7 @@ wsServer.on('connection', (connection,request) => {
             x: 0,
             y: 0,
             SessionGameID: 0// mysle zeby sprawidzc czy jest juz ustalony jak nie no to wtedy wpisac
-
+            
         },
     }
     connection.on('message', message => handleMessage(message, uuid))

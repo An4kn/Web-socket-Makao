@@ -1,0 +1,107 @@
+
+<!DOCTYPE html>
+
+<html>
+<head>
+<meta charset="utf-8" />
+<title>WebSocket Test</title>
+
+<script language="javascript" type="text/javascript">
+
+  var output;
+
+  function init() {
+    output = document.getElementById("output");
+    websocket = new WebSocket("ws://localhost:8000/ws");
+    websocket.binaryType = "arraybuffer";
+    websocket.onopen = function(e) { onOpen(e) };
+    websocket.onclose = function(e) { onClose(e) };
+    websocket.onmessage = function(e) { onMessage(e) };
+    websocket.onerror = function(e) { onError(e) };
+  }
+
+  function clickHandler(e) {
+    var x = e.clientX;
+    var y = e.clientY;
+    console.log("x: " + x + ", y: " + y);
+    var buffer = new ArrayBuffer(4);
+    var dv  = new DataView(buffer);
+    dv.setInt16(0, x);
+    dv.setInt16(2, y);
+    websocket.send(buffer);
+    // var bytearray = new Uint16Array(2);
+    //bytearray[0] = x;
+    //bytearray[1] = y;
+    //websocket.send(bytearray.buffer);
+  }
+
+  function sendExampleMove(e) {
+    const playerId = 1;      // Gracz 1
+    const action = 1;        // Rzuca kartę
+    const color = 2;         // Pik
+    const value = -2;         // Dziewiątka
+    const handSize = 4;      // Ma 4 karty w ręku
+    var x = e.clientX;
+    console.log("klinkniete");
+    sendMove(playerId, action, color, value, handSize,e);
+}
+
+  function sendMove(playerId, actionCode, color, value, handSize,e) {
+    let buffer = new ArrayBuffer(5); // 5 bajtów
+    let view = new DataView(buffer);
+    view.setUint8(0, playerId);
+    view.setUint8(1, actionCode);
+    view.setUint8(2, color);
+    view.setInt8(3, value); //tutaj trzeba zmienic na uint8
+    view.setUint8(4, handSize); //tutaj enum na moje
+    websocket.send(buffer);
+}
+  
+  function onOpen(e) {
+    writeToScreen(e.type);
+  }
+
+  function onClose(e) {
+    writeToScreen(e.type);
+  }
+
+  function onMessage(e) {
+    //var len = new Float32Array(e.data);
+    var dv = new DataView(e.data, 0);
+    x = dv.getInt32(0);
+    y = dv.getInt32(4);
+    l = dv.getFloat32(8);
+    writeToScreen("rcvd: [" + x + ","+y+"]  length="+l);
+  }
+
+  function onError(e) {
+    writeToScreen("Error: " + e.data);
+  }
+
+  function doSend(message) {
+    writeToScreen("send: " + message); 
+    websocket.send(message);
+  }
+
+  function writeToScreen(message) {
+    var p = document.createElement("p");
+    p.innerHTML = message;
+    output.appendChild(p);
+  }
+
+  window.addEventListener("load", init, false);
+  window.addEventListener("click", sendExampleMove);
+
+</script>
+
+<body>
+
+<h2>WebSocket Test</h2>
+
+<div id="output"></div>
+<!-- <button onclick="sendExampleMove()">Wyślij przykładowy ruch</button> -->
+
+
+</body>
+
+</html>
