@@ -13,7 +13,18 @@ class EchoHandler(tornado.websocket.WebSocketHandler):
     players = {}
 
     def open(self):
-        print("open")
+        print("open") #moze nawet wopen w sumie xd
+        # player_id = max(self.players.keys(), default=0) + 1
+        # game_id = max(self.games.keys(), default=0) + 1
+
+        # response_format = "<BH"  # B - unsigned byte dla player_id, H - unsigned short dla game_id (dostosuj format!)
+        game, player = ManageGame(self.players, self.games)
+        # response_data = struct.pack(response_format, player_id, game_id)
+        # self.write_message(response_data, binary=True)
+        binary_data = player.to_binary_with_game_info(game.game_id)
+        self.write_message(binary_data, binary=True)
+        
+        print(f"Client connected. Player ID: {player.player_id}, Game ID: {game.game_id}, and the hand {player.hand} (sent to client)")
 
     def on_close(self):
         print("close")
@@ -31,11 +42,10 @@ class EchoHandler(tornado.websocket.WebSocketHandler):
             return
         player_id, action, color, value, hand_size = struct.unpack("BBBBB", message)
         print(f"Player {player_id} did action {action}, card: {color}-{value}, hand size: {hand_size}")
-        ManageGame(self.players, self.games)
+        # ManageGame(self.players, self.games)
     # id sesji
     # inicjalizacja
     
-
     def check_origin(self, origin):
         return True
 

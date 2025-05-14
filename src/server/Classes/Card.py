@@ -1,5 +1,7 @@
+from ..Enum import Rank, Suit, Action
+
 class Card:
-    def __init__(self, rank, suit, action=None):
+    def __init__(self, rank: Rank, suit: Suit, action=None):
         self.rank = rank
         self.suit = suit
         self.action = action  # Akcja specjalna, np. "skip", "reverse", "draw 2"

@@ -1,9 +1,13 @@
 import random
-from . import Card
+from .Card import Card
+from ..Enum import Rank, Suit, Action
+
+
 
 class Game:
-    def __init__(self, max_players=2):
+    def __init__(self, game_id, max_players=2):
         """Initializes the game with up to `max_players` players."""
+        self.game_id = game_id
         self.max_players = max_players
         self.players = []
         self.deck = []  # Create and shuffle deck
@@ -33,21 +37,30 @@ class Game:
         self.played_cards.append(self.deck.draw_card())
     # def draw_card(self):
 
-    def create_deck(self):
-        suits = ['Hearts', 'Diamonds', 'Clubs', 'Spades']  # Kolory
-        ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King', 'Ace']  # Wartości kart
-        # deck = []
+    # def create_deck(self):
+    #     suits = ['Hearts', 'Diamonds', 'Clubs', 'Spades']  # Kolory
+    #     ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King', 'Ace']  # Wartości kart
+    #     # deck = []
 
-        # Tworzenie talii
-        for suit in suits:
-            for rank in ranks:
-                card = Card.Card(suit, rank)
+    #     # Tworzenie talii
+    #     for suit in suits:
+    #         for rank in ranks:
+    #             card = Card.Card(suit, rank)
+    #             self.deck.append(card)
+
+    #     # Potasowanie talii
+    #     random.shuffle(self.deck)
+    #     print("Talia kart:", self.deck)  # Debugging line
+    #     # return deck?
+    def create_deck(self):
+        for suit in Suit:
+            for rank in Rank:
+                card = Card(rank=rank, suit=suit, action=Action.NONE)  # lub domyślnie action=NONE
                 self.deck.append(card)
 
-        # Potasowanie talii
         random.shuffle(self.deck)
-        print("Talia kart:", self.deck)  # Debugging line
-        # return deck?
+        print("Talia kart:", self.deck)
+
     
     def draw_card(self):
         """Draws a card from the deck."""

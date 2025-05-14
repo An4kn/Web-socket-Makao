@@ -1,107 +1,490 @@
-
 <!DOCTYPE html>
 
 <html>
 <head>
 <meta charset="utf-8" />
-<title>WebSocket Test</title>
+<title>WebSocket Card Game</title>
 
-<script language="javascript" type="text/javascript">
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  
+  #gameCanvas {
+    margin-top: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  }
+  
+  #output {
+    height: 200px;
+    overflow-y: auto;
+    border: 1px solid #ccc;
+    padding: 10px;
+    margin-bottom: 20px;
+    background-color: #f9f9f9;
+  }
+  
+  .card {
+    display: inline-block;
+    width: 80px;
+    height: 120px;
+    margin: 10px;
+    border-radius: 5px;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+    transition: transform 0.2s;
+    cursor: pointer;
+  }
+  
+  .card:hover {
+    transform: translateY(-10px);
+  }
+  
+  button {
+    padding: 10px 15px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-bottom: 20px;
+  }
+  
+  button:hover {
+    background-color: #45a049;
+  }
+</style>
 
+<script>
   var output;
+  var canvas;
+  var ctx;
+  var websocket;
+  
+  const exampleHand = [
+    { rank: '9', suit: 'HEARTS', action: 'NONE' },
+    { rank: 'KING', suit: 'SPADES', action: 'NONE' },
+    { rank: '7', suit: 'DIAMONDS', action: 'SKIP' },
+    { rank: '10', suit: 'CLUBS', action: 'DRAW_TWO' }
+  ];
 
+  // Maps for conversion between enum values and display text
+  const Rank = {
+    2: '2',
+    3: '3',
+    4: '4',
+    5: '5',
+    6: '6',
+    7: '7',
+    8: '8',
+    9: '9',
+    10: '10',
+    11: 'JACK',
+    12: 'QUEEN',
+    13: 'KING',
+    14: 'ACE'
+  };
+
+  const Suit = {
+    0: 'HEARTS',
+    1: 'DIAMONDS',
+    2: 'CLUBS',
+    3: 'SPADES'
+  };
+
+  const Action = {
+    0: 'NONE',
+    1: 'SKIP',
+    2: 'REVERSE',
+    3: 'DRAW_TWO'
+  };
+
+  document.addEventListener('DOMContentLoaded', () => {
+  canvas = document.getElementById('gameCanvas'); // Replace 'your-canvas-id' with the actual ID
+  if (canvas) {
+    ctx = canvas.getContext('2d');
+    if (!ctx) {
+      console.error("Failed to get 2D context from canvas");
+      // Handle the error, maybe display a message to the user
+    } else {
+      // Canvas and context are ready, you can now draw or set up drawing functions
+      // For example, if you want to draw something initially:
+      // drawHand(initialHand);
+    }
+  } else {
+    console.error("Canvas element not found");
+    // Handle the error, maybe display a message to the user
+  }
+});
+
+  // Initialize WebSocket connection and UI elements
   function init() {
     output = document.getElementById("output");
-    websocket = new WebSocket("ws://localhost:8000/ws");
-    websocket.binaryType = "arraybuffer";
-    websocket.onopen = function(e) { onOpen(e) };
-    websocket.onclose = function(e) { onClose(e) };
-    websocket.onmessage = function(e) { onMessage(e) };
-    websocket.onerror = function(e) { onError(e) };
+    canvas = document.getElementById("gameCanvas");
+    
+    if (canvas) {
+      ctx = canvas.getContext("2d");
+      
+      // Try to connect to WebSocket server
+      try {
+        websocket = new WebSocket("ws://localhost:8000/ws");
+        websocket.binaryType = "arraybuffer";
+        websocket.onopen = function(e) { onOpen(e) };
+        websocket.onclose = function(e) { onClose(e) };
+        websocket.onmessage = function(e) { onMessage(e) };
+        websocket.onerror = function(e) { onError(e) };
+      } catch (e) {
+        writeToScreen("WebSocket error: " + e.message);
+        
+        // If connection fails, draw example hand
+        drawExampleHand();
+      }
+      
+      // Draw any saved hand from localStorage
+      loadSavedHand();
+    } else {
+      console.error("Canvas element not found!");
+    }
+  }
+  
+  // Show example hand when connection fails
+  function drawExampleHand() {
+    writeToScreen("Using example hand data");
+    drawHand(exampleHand);
+  }
+  
+  // Load and draw any hand saved in localStorage
+  function loadSavedHand() {
+    const playerId = localStorage.getItem("playerId");
+    const gameId = localStorage.getItem("gameId");
+    const compactStr = localStorage.getItem("hand");
+    
+    if (compactStr) {
+      writeToScreen(`Loaded from storage: Game ID: ${gameId}, Player ID: ${playerId}`);
+      
+      try {
+        const hand = [];
+        const cardDataArray = compactStr.split(",");
+        
+        for (const cardData of cardDataArray) {
+          const [rankVal, suitVal, actionVal] = cardData.split("-").map(Number);
+          hand.push({
+            rank: Rank[rankVal] || rankVal.toString(),
+            suit: Suit[suitVal] || suitVal.toString(),
+            action: Action[actionVal] || "NONE"
+          });
+          console.log("Loaded card:", { 
+            rank: Rank[rankVal] || rankVal, 
+            suit: Suit[suitVal] || suitVal, 
+            action: Action[actionVal] || "NONE" 
+          });
+        }
+        
+        if (hand.length > 0) {
+          drawHand(hand);
+        }
+      } catch (e) {
+        console.error("Error loading hand:", e);
+        writeToScreen("Error loading saved hand");
+      }
+    }
   }
 
-  function clickHandler(e) {
-    var x = e.clientX;
-    var y = e.clientY;
-    console.log("x: " + x + ", y: " + y);
-    var buffer = new ArrayBuffer(4);
-    var dv  = new DataView(buffer);
-    dv.setInt16(0, x);
-    dv.setInt16(2, y);
-    websocket.send(buffer);
-    // var bytearray = new Uint16Array(2);
-    //bytearray[0] = x;
-    //bytearray[1] = y;
-    //websocket.send(bytearray.buffer);
+  // Handle click on canvas
+  function sendCardMove(e) {
+    if (!websocket || websocket.readyState !== WebSocket.OPEN) {
+      writeToScreen("WebSocket not connected. Cannot send move.");
+      return;
+    }
+    
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    // Check if clicked on a card and determine which one
+    const cardWidth = 80;
+    const cardSpacing = 100;
+    const cardStartX = 20;
+    const cardY = 50;
+    const cardHeight = 120;
+    
+    if (y >= cardY && y <= cardY + cardHeight) {
+      const cardIndex = Math.floor((x - cardStartX) / cardSpacing);
+      if (cardIndex >= 0 && cardIndex < 5) { // Assuming max 5 cards displayed
+        writeToScreen(`Clicked on card ${cardIndex + 1}`);
+        
+        // Send move information
+        const playerId = parseInt(localStorage.getItem("playerId")) || 1;
+        const action = 1;  // Play card action
+        const color = 2;   // Example color (Clubs)
+        const value = 9;   // Example value (9)
+        const handSize = 4; // Example hand size
+        
+        sendMove(playerId, action, color, value, handSize);
+      }
+    }
   }
 
-  function sendExampleMove(e) {
-    const playerId = 1;      // Gracz 1
-    const action = 1;        // Rzuca kartę
-    const color = 2;         // Pik
-    const value = -2;         // Dziewiątka
-    const handSize = 4;      // Ma 4 karty w ręku
-    var x = e.clientX;
-    console.log("klinkniete");
-    sendMove(playerId, action, color, value, handSize,e);
-}
-
-  function sendMove(playerId, actionCode, color, value, handSize,e) {
-    let buffer = new ArrayBuffer(5); // 5 bajtów
+  // Send binary move data to server
+  function sendMove(playerId, actionCode, color, value, handSize) {
+    if (!websocket || websocket.readyState !== WebSocket.OPEN) {
+      writeToScreen("WebSocket not connected. Cannot send move.");
+      return;
+    }
+    
+    let buffer = new ArrayBuffer(5); // 5 bytes
     let view = new DataView(buffer);
     view.setUint8(0, playerId);
     view.setUint8(1, actionCode);
     view.setUint8(2, color);
-    view.setInt8(3, value); //tutaj trzeba zmienic na uint8
-    view.setUint8(4, handSize); //tutaj enum na moje
+    view.setInt8(3, value);
+    view.setUint8(4, handSize);
     websocket.send(buffer);
-}
+    
+    writeToScreen(`Sent move: Player ${playerId}, Action ${actionCode}, Color ${color}, Value ${value}`);
+  }
   
+  // WebSocket event handlers
   function onOpen(e) {
-    writeToScreen(e.type);
+    writeToScreen("Connected to server");
   }
 
   function onClose(e) {
-    writeToScreen(e.type);
-  }
-
-  function onMessage(e) {
-    //var len = new Float32Array(e.data);
-    var dv = new DataView(e.data, 0);
-    x = dv.getInt32(0);
-    y = dv.getInt32(4);
-    l = dv.getFloat32(8);
-    writeToScreen("rcvd: [" + x + ","+y+"]  length="+l);
+    writeToScreen("Disconnected from server");
   }
 
   function onError(e) {
-    writeToScreen("Error: " + e.data);
+    writeToScreen("Error: " + (e.data || "WebSocket error"));
   }
 
-  function doSend(message) {
-    writeToScreen("send: " + message); 
-    websocket.send(message);
+  // Process binary message from server
+  function onMessage(event) {
+    const buffer = event.data;
+    const dv = new DataView(buffer);
+    let offset = 0;
+
+    // Parse game ID (Uint16, little-endian)
+    const gameId = dv.getUint16(offset, true);
+    offset += 2;
+
+    // Parse player ID (Uint8)
+    const playerId = dv.getUint8(offset);
+    offset += 1;
+
+    // Parse hand size (Uint8)
+    const handSize = dv.getUint8(offset);
+    offset += 1;
+
+    // Parse cards in hand
+    const hand = [];
+    for (let i = 0; i < handSize; i++) {
+      const rankValue = dv.getUint8(offset); offset += 1;
+      const suitValue = dv.getUint8(offset); offset += 1;
+      const actionValue = dv.getUint8(offset); offset += 1;
+
+      hand.push({
+        rank: Rank[rankValue] || rankValue.toString(),
+        suit: Suit[suitValue] || suitValue.toString(),
+        action: Action[actionValue] || "NONE"
+      });
+      
+      console.log("Received card:", { 
+        rank: Rank[rankValue] || rankValue, 
+        suit: Suit[suitValue] || suitValue, 
+        action: Action[actionValue] || "NONE" 
+      });
+    }
+
+    console.log({ gameId, playerId, hand });
+    
+    // Save to localStorage
+    localStorage.setItem("playerId", playerId);
+    localStorage.setItem("gameId", gameId);
+
+    const compactStr = hand.map(card => 
+      `${Object.keys(Rank).find(k => Rank[k] === card.rank) || card.rank}-` +
+      `${Object.keys(Suit).find(k => Suit[k] === card.suit) || card.suit}-` +
+      `${Object.keys(Action).find(k => Action[k] === card.action) || 0}`
+    ).join(",");
+    
+    localStorage.setItem("hand", compactStr);
+
+    writeToScreen(`Received initialization data: Game ID: ${gameId}, Player ID: ${playerId}, Hand size: ${hand.length}`);
+    
+    // Draw the hand on canvas
+    drawHand(hand);
   }
 
+  // Display message in output div
   function writeToScreen(message) {
     var p = document.createElement("p");
-    p.innerHTML = message;
-    output.appendChild(p);
+    p.style.margin = "2px 0";
+    p.innerHTML = `<strong>${new Date().toLocaleTimeString()}</strong>: ${message}`;
+    
+    if (output) {
+      output.appendChild(p);
+      output.scrollTop = output.scrollHeight; // Auto-scroll to bottom
+    } else {
+      console.log(message);
+    }
   }
 
-  window.addEventListener("load", init, false);
-  window.addEventListener("click", sendExampleMove);
+  // Card drawing functions
+  const suitColors = {
+    'HEARTS': 'red',
+    'DIAMONDS': 'red',
+    'CLUBS': 'black',
+    'SPADES': 'black'
+  };
 
+  const suitSymbols = {
+    'HEARTS': '♥',
+    'DIAMONDS': '♦',
+    'CLUBS': '♣',
+    'SPADES': '♠'
+  };
+
+  // Draw a single card
+  function drawCard(card, x, y) {
+    if (!ctx) return;
+    
+    // Draw card background
+    ctx.fillStyle = 'white';
+    ctx.strokeStyle = 'black';
+    ctx.lineWidth = 2;
+    ctx.fillRect(x, y, 80, 120);
+    ctx.strokeRect(x, y, 80, 120);
+
+    // Set color based on suit
+    const color = suitColors[card.suit] || 'gray';
+    const symbol = suitSymbols[card.suit] || card.suit;
+    
+    // Draw rank and suit
+    ctx.fillStyle = color;
+    ctx.font = 'bold 16px Arial';
+    ctx.fillText(`${card.rank}`, x + 8, y + 20);
+    
+    // Draw suit symbol
+    ctx.font = 'bold 24px Arial';
+    ctx.fillText(symbol, x + 8, y + 50);
+    
+    // Draw in center
+    ctx.font = 'bold 32px Arial';
+    ctx.fillText(symbol, x + 30, y + 75);
+
+    // Draw action if any
+    if (card.action !== 'NONE') {
+      ctx.fillStyle = 'blue';
+      ctx.font = '12px Arial';
+      ctx.fillText(card.action, x + 8, y + 110);
+    }
+  }
+
+  // Draw the entire hand
+  function drawHand(hand) {
+    if (!ctx) {
+      console.error("Canvas context not available");
+      return;
+    }
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    if (hand && hand.length) {
+      hand.forEach((card, index) => {
+        drawCard(card, 20 + index * 100, 50);
+      });
+    } else {
+      ctx.fillStyle = 'black';
+      ctx.font = '16px Arial';
+      ctx.fillText("No cards to display", 20, 100);
+    }
+  }
+
+  // Manual test functions
+  function testDrawExample() {
+    drawHand(exampleHand);
+    writeToScreen("Displaying example hand");
+  }
+
+  function testSimulateMessage() {
+    // Create a sample binary message similar to what the server would send
+    const sampleHandSize = 3;
+    const buffer = new ArrayBuffer(2 + 1 + 1 + (sampleHandSize * 3));
+    const view = new DataView(buffer);
+    
+    // Game ID (2 bytes)
+    view.setUint16(0, 42, true);
+    
+    // Player ID (1 byte)
+    view.setUint8(2, 7);
+    
+    // Hand size (1 byte)
+    view.setUint8(3, sampleHandSize);
+    
+    // Cards (3 bytes each: rank, suit, action)
+    // Card 1: King of Hearts
+    view.setUint8(4, 13); // King
+    view.setUint8(5, 0);  // Hearts
+    view.setUint8(6, 0);  // No action
+    
+    // Card 2: 5 of Diamonds
+    view.setUint8(7, 5);  // 5
+    view.setUint8(8, 1);  // Diamonds
+    view.setUint8(9, 0);  // No action
+    
+    // Card 3: Jack of Clubs with Skip
+    view.setUint8(10, 11); // Jack
+    view.setUint8(11, 2);  // Clubs
+    view.setUint8(12, 1);  // Skip action
+    
+    // Process this fake message
+    onMessage({data: buffer});
+  }
+
+  // Register event listeners when page loads
+  window.addEventListener("load", init, false);
+  window.addEventListener("DOMContentLoaded", function() {
+    // Canvas click handler
+    const canvasElement = document.getElementById("gameCanvas");
+    if (canvasElement) {
+      canvasElement.addEventListener("click", sendCardMove);
+    }
+    
+    // Test button handlers
+    const testDrawBtn = document.getElementById("testDrawBtn");
+    if (testDrawBtn) {
+      testDrawBtn.addEventListener("click", testDrawExample);
+    }
+    
+    const testMsgBtn = document.getElementById("testMsgBtn");
+    if (testMsgBtn) {
+      testMsgBtn.addEventListener("click", testSimulateMessage);
+    }
+  });
 </script>
+</head>
 
 <body>
-
-<h2>WebSocket Test</h2>
-
-<div id="output"></div>
-<!-- <button onclick="sendExampleMove()">Wyślij przykładowy ruch</button> -->
-
-
+  <h2>WebSocket Card Game</h2>
+  
+  <div id="output"></div>
+  
+  <div>
+    <button id="testDrawBtn">Test Draw Cards</button>
+    <button id="testMsgBtn">Test Simulate Message</button>
+  </div>
+  
+  <canvas id="gameCanvas" width="800" height="200" style="border:1px solid #000000;"></canvas>
+  
+  <div style="margin-top: 20px;">
+    <h3>Instructions:</h3>
+    <ul>
+      <li>Click on a card to play it</li>
+      <li>The game connects to WebSocket server at ws://localhost:8000/ws</li>
+      <li>Your hand is saved in browser storage</li>
+    </ul>
+  </div>
 </body>
-
 </html>

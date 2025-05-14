@@ -14,7 +14,6 @@ def ManageGame(players, games, player_id=-1,game_id=-1,init_game=True): # moze i
     else:
         pass #TODO: handle game logic
     
-    
     # game.add_player("Player 1")
     print("Ręka gracza 1:", player.hand)
     print("Karty w grze:", game.deck)
@@ -22,6 +21,7 @@ def ManageGame(players, games, player_id=-1,game_id=-1,init_game=True): # moze i
     print("Liczba graczy:", len(players))
     print("Liczba gier:", len(games))
 
+    return game, player
 
 def FindGame(games,players):
     game = None
@@ -49,8 +49,8 @@ def GameInit(games):
     # Tworzymy nową grę o ID 1
     # id vs uuid
     # dodac flage ocxzekiwania reday gry
-    game = Game()
     game_id = max(games.keys(), default=0) + 1
+    game = Game(game_id)
     games[game_id] = game
     game.create_deck()
 
