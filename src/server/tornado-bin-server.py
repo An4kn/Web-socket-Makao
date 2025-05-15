@@ -4,7 +4,7 @@ import tornado.ioloop
 import struct
 
 # Assuming ManageGame is a function in the GameManage module
-from .GameManage import ManageGame
+from GameManage import ManageGame
 
 
 class EchoHandler(tornado.websocket.WebSocketHandler):

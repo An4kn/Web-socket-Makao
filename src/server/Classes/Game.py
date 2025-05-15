@@ -1,6 +1,6 @@
 import random
 from .Card import Card
-from ..Enum import Rank, Suit, Action
+from Enum import Rank, Suit, Action
 
 
 

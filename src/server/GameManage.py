@@ -1,8 +1,8 @@
 # import server.Classes.Game as Game
-from .Classes.Game import Game
+from Classes.Game import Game
 # import Game"???
 # from .Classes.GameManager import GameManager
-from .Classes.Player import Player
+from Classes.Player import Player
 
 
 

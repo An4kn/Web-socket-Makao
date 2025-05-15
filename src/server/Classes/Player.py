@@ -1,4 +1,4 @@
-from server.Classes.Game import Game
+from .Game import Game
 import struct
 
 class Player:

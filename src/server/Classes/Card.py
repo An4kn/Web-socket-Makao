@@ -1,4 +1,4 @@
-from ..Enum import Rank, Suit, Action
+from Enum import Rank, Suit, Action
 
 class Card:
     def __init__(self, rank: Rank, suit: Suit, action=None):

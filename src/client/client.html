@@ -4,58 +4,7 @@
 <head>
 <meta charset="utf-8" />
 <title>WebSocket Card Game</title>
-
-<style>
-  body {
-    font-family: Arial, sans-serif;
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 20px;
-  }
-  
-  #gameCanvas {
-    margin-top: 20px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
-  }
-  
-  #output {
-    height: 200px;
-    overflow-y: auto;
-    border: 1px solid #ccc;
-    padding: 10px;
-    margin-bottom: 20px;
-    background-color: #f9f9f9;
-  }
-  
-  .card {
-    display: inline-block;
-    width: 80px;
-    height: 120px;
-    margin: 10px;
-    border-radius: 5px;
-    box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
-    transition: transform 0.2s;
-    cursor: pointer;
-  }
-  
-  .card:hover {
-    transform: translateY(-10px);
-  }
-  
-  button {
-    padding: 10px 15px;
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    margin-bottom: 20px;
-  }
-  
-  button:hover {
-    background-color: #45a049;
-  }
-</style>
+<link rel="stylesheet" href="styles.css">
 
 <script>
   var output;
@@ -107,15 +56,10 @@
     ctx = canvas.getContext('2d');
     if (!ctx) {
       console.error("Failed to get 2D context from canvas");
-      // Handle the error, maybe display a message to the user
-    } else {
-      // Canvas and context are ready, you can now draw or set up drawing functions
-      // For example, if you want to draw something initially:
-      // drawHand(initialHand);
+    } else {      
     }
   } else {
     console.error("Canvas element not found");
-    // Handle the error, maybe display a message to the user
   }
 });
 
@@ -451,17 +395,16 @@
     if (canvasElement) {
       canvasElement.addEventListener("click", sendCardMove);
     }
+    // // Test button handlers
+    // const testDrawBtn = document.getElementById("testDrawBtn");
+    // if (testDrawBtn) {
+    //   testDrawBtn.addEventListener("click", testDrawExample);
+    // }
     
-    // Test button handlers
-    const testDrawBtn = document.getElementById("testDrawBtn");
-    if (testDrawBtn) {
-      testDrawBtn.addEventListener("click", testDrawExample);
-    }
-    
-    const testMsgBtn = document.getElementById("testMsgBtn");
-    if (testMsgBtn) {
-      testMsgBtn.addEventListener("click", testSimulateMessage);
-    }
+    // const testMsgBtn = document.getElementById("testMsgBtn");
+    // if (testMsgBtn) {
+    //   testMsgBtn.addEventListener("click", testSimulateMessage);
+    // }
   });
 </script>
 </head>
