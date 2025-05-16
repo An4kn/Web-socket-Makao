@@ -4,20 +4,63 @@
 <head>
 <meta charset="utf-8" />
 <title>WebSocket Card Game</title>
-<link rel="stylesheet" href="styles.css">
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  
+  #gameCanvas {
+    margin-top: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  }
+  
+  #output {
+    height: 200px;
+    overflow-y: auto;
+    border: 1px solid #ccc;
+    padding: 10px;
+    margin-bottom: 20px;
+    background-color: #f9f9f9;
+  }
+  
+  .card {
+    display: inline-block;
+    width: 80px;
+    height: 120px;
+    margin: 10px;
+    border-radius: 5px;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+    transition: transform 0.2s;
+    cursor: pointer;
+  }
+  
+  .card:hover {
+    transform: translateY(-10px);
+  }
+  
+  button {
+    padding: 10px 15px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-bottom: 20px;
+  }
+  
+  button:hover {
+    background-color: #45a049;
+  }
+</style>
 
 <script>
   var output;
   var canvas;
   var ctx;
   var websocket;
-  
-  const exampleHand = [
-    { rank: '9', suit: 'HEARTS', action: 'NONE' },
-    { rank: 'KING', suit: 'SPADES', action: 'NONE' },
-    { rank: '7', suit: 'DIAMONDS', action: 'SKIP' },
-    { rank: '10', suit: 'CLUBS', action: 'DRAW_TWO' }
-  ];
 
   // Maps for conversion between enum values and display text
   const Rank = {
@@ -51,7 +94,7 @@
   };
 
   document.addEventListener('DOMContentLoaded', () => {
-  canvas = document.getElementById('gameCanvas'); // Replace 'your-canvas-id' with the actual ID
+  canvas = document.getElementById('gameCanvas'); 
   if (canvas) {
     ctx = canvas.getContext('2d');
     if (!ctx) {
@@ -69,7 +112,7 @@
     canvas = document.getElementById("gameCanvas");
     
     if (canvas) {
-      ctx = canvas.getContext("2d");
+      ctx = canvas.getContext("2d"); //TODO nie wiem czy to jest potrzebne
       
       // Try to connect to WebSocket server
       try {
@@ -240,7 +283,7 @@
         action: Action[actionValue] || "NONE" 
       });
     }
-
+  
     console.log({ gameId, playerId, hand });
     
     // Save to localStorage
@@ -346,12 +389,6 @@
     }
   }
 
-  // Manual test functions
-  function testDrawExample() {
-    drawHand(exampleHand);
-    writeToScreen("Displaying example hand");
-  }
-
   function testSimulateMessage() {
     // Create a sample binary message similar to what the server would send
     const sampleHandSize = 3;
@@ -388,23 +425,13 @@
   }
 
   // Register event listeners when page loads
-  window.addEventListener("load", init, false);
+  window.addEventListener("load", init, false); //TODO tutaj bymy incijalizowal sprawdzal czy jest webstorage czy nie bo na po czatku nie ma jesli nie ma no to wtedty serwer dostaje taka informacje
   window.addEventListener("DOMContentLoaded", function() {
     // Canvas click handler
     const canvasElement = document.getElementById("gameCanvas");
     if (canvasElement) {
       canvasElement.addEventListener("click", sendCardMove);
     }
-    // // Test button handlers
-    // const testDrawBtn = document.getElementById("testDrawBtn");
-    // if (testDrawBtn) {
-    //   testDrawBtn.addEventListener("click", testDrawExample);
-    // }
-    
-    // const testMsgBtn = document.getElementById("testMsgBtn");
-    // if (testMsgBtn) {
-    //   testMsgBtn.addEventListener("click", testSimulateMessage);
-    // }
   });
 </script>
 </head>

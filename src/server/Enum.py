@@ -22,7 +22,7 @@ class Suit(Enum):
     SPADES = 3
 
 class Action(Enum):
-    NONE = 0
-    SKIP = 1
-    REVERSE = 2
-    DRAW_TWO = 3
+    FIRST_PLAYER_INITIALIZATION = 0
+    SECOND_PLAYER_INITIALIZATION = 1
+    PLAYER_CLICK = 2
+

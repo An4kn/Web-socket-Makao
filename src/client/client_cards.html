@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Macau Card Game</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  
+  #gameCanvas {
+    margin-top: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  }
+  
+  #output {
+    height: 200px;
+    overflow-y: auto;
+    border: 1px solid #ccc;
+    padding: 10px;
+    margin-bottom: 20px;
+    background-color: #f9f9f9;
+  }
+  
+  .card {
+    display: inline-block;
+    width: 80px;
+    height: 120px;
+    margin: 10px;
+    border-radius: 5px;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+    transition: transform 0.2s;
+    cursor: pointer;
+  }
+  
+  .card:hover {
+    transform: translateY(-10px);
+  }
+  
+  button {
+    padding: 10px 15px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-bottom: 20px;
+  }
+  
+  button:hover {
+    background-color: #45a049;
+  }
+  
+  #cardNavigationControls {
+    text-align: center;
+    margin-top: 10px;
+  }
+</style>
+
+<script>
+  var output;
+  var canvas;
+  var ctx;
+  var websocket;
+  var currentHand = [];
+  var fieldCard = null;
+  var startCardIndex = 0; // For scrolling through cards
+  var maxVisibleCards = 7; // Maximum number of cards visible at once
+  var hoveredCardIndex = -1; // Track which card is being hovered
+  var hoveredDeckCard = false; // Track if deck card is being hovered
+
+  // Maps for conversion between enum values and display text
+  const Rank = {
+    2: '2',
+    3: '3',
+    4: '4',
+    5: '5',
+    6: '6',
+    7: '7',
+    8: '8',
+    9: '9',
+    10: '10',
+    11: 'JACK',
+    12: 'QUEEN',
+    13: 'KING',
+    14: 'ACE'
+  };
+
+  const Suit = {
+    0: 'HEARTS',
+    1: 'DIAMONDS',
+    2: 'CLUBS',
+    3: 'SPADES'
+  };
+
+  const Action = {
+    0: 'NONE',
+    1: 'SKIP',
+    2: 'REVERSE',
+    3: 'DRAW_TWO'
+  };
+
+  document.addEventListener('DOMContentLoaded', () => {
+    canvas = document.getElementById('gameCanvas');
+    if (canvas) {
+      ctx = canvas.getContext('2d');
+      if (!ctx) {
+        console.error("Failed to get 2D context from canvas");
+      }
+    } else {
+      console.error("Canvas element not found");
+    }
+    
+    // Add event listeners for navigation buttons
+    document.getElementById('prevCards').addEventListener('click', () => {
+      if (startCardIndex > 0) {
+        startCardIndex--;
+        drawGameState();
+      }
+    });
+    
+    document.getElementById('nextCards').addEventListener('click', () => {
+      if (startCardIndex + maxVisibleCards < currentHand.length) {
+        startCardIndex++;
+        drawGameState();
+      }
+    });
+    
+    // Add mouse move listener for highlighting
+    canvas.addEventListener('mousemove', handleMouseMove);
+  });
+
+  // Initialize WebSocket connection and UI elements
+  function init() {
+    output = document.getElementById("output");
+    canvas = document.getElementById("gameCanvas");
+    
+    if (canvas) {
+      ctx = canvas.getContext("2d");
+      
+      // Try to connect to WebSocket server
+      try {
+        websocket = new WebSocket("ws://localhost:8000/ws");
+        websocket.binaryType = "arraybuffer";
+        websocket.onopen = function(e) { onOpen(e) };
+        websocket.onclose = function(e) { onClose(e) };
+        websocket.onmessage = function(e) { onMessage(e) };
+        websocket.onerror = function(e) { onError(e) };
+      } catch (e) {
+        writeToScreen("WebSocket error: " + e.message);
+        
+        // If connection fails, draw example hand
+        drawExampleHand();
+      }
+      
+      // Load saved game state from localStorage
+      loadSavedGameState();
+    } else {
+      console.error("Canvas element not found!");
+    }
+  }
+  
+  // Show example hand when connection fails
+  function drawExampleHand() {
+    writeToScreen("Using example hand data");
+    
+    // Example field card
+    fieldCard = {
+      rank: 'KING',
+      suit: 'HEARTS',
+      action: 'NONE'
+    };
+    
+    // Example hand with more than 7 cards to test scrolling
+    currentHand = [
+      { rank: '7', suit: 'HEARTS', action: 'NONE' },
+      { rank: 'JACK', suit: 'CLUBS', action: 'SKIP' },
+      { rank: '10', suit: 'DIAMONDS', action: 'NONE' },
+      { rank: 'ACE', suit: 'SPADES', action: 'NONE' },
+      { rank: '5', suit: 'HEARTS', action: 'NONE' },
+      { rank: 'QUEEN', suit: 'DIAMONDS', action: 'NONE' },
+      { rank: '9', suit: 'CLUBS', action: 'NONE' },
+      { rank: '2', suit: 'SPADES', action: 'DRAW_TWO' },
+      { rank: '8', suit: 'HEARTS', action: 'NONE' },
+      { rank: '3', suit: 'DIAMONDS', action: 'NONE' }
+    ];
+    
+    drawGameState();
+  }
+  
+  // Load and draw any game state saved in localStorage
+  function loadSavedGameState() {
+    const playerId = localStorage.getItem("playerId");
+    const gameId = localStorage.getItem("gameId");
+    const handCompactStr = localStorage.getItem("hand");
+    const fieldCardCompactStr = localStorage.getItem("fieldCard");
+    
+    if (handCompactStr) {
+      writeToScreen(`Loaded from storage: Game ID: ${gameId}, Player ID: ${playerId}`);//dziwny cudzysłów
+      
+      try {
+        // Load hand
+        currentHand = [];
+        const cardDataArray = handCompactStr.split(",");
+        
+        for (const cardData of cardDataArray) {
+          const [rankVal, suitVal, actionVal] = cardData.split("-").map(Number);
+          currentHand.push({
+            rank: Rank[rankVal] || rankVal.toString(),
+            suit: Suit[suitVal] || suitVal.toString(),
+            action: Action[actionVal] || "NONE"
+          });
+        }
+        
+        // Load field card if available
+        if (fieldCardCompactStr) {
+          const [rankVal, suitVal, actionVal] = fieldCardCompactStr.split("-").map(Number);
+          fieldCard = {
+            rank: Rank[rankVal] || rankVal.toString(),
+            suit: Suit[suitVal] || suitVal.toString(),
+            action: Action[actionVal] || "NONE"
+          };
+        }
+        
+        // Draw the game state
+        if (currentHand.length > 0) {
+          drawGameState();
+        }
+      } catch (e) {
+        console.error("Error loading game state:", e);
+        writeToScreen("Error loading saved game state");
+      }
+    }
+  }
+
+  // Handle mouse movement for highlighting cards
+  function handleMouseMove(e) {
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    // Check for hover on player cards
+    const cardWidth = 80;
+    const cardSpacing = 90;
+    const cardStartX = 20;
+    const cardY = 280;
+    const cardHeight = 120;
+    
+    // Reset hover states
+    let newHoveredCardIndex = -1;
+    let newHoveredDeckCard = false;
+    
+    // Check player cards
+    if (y >= cardY && y <= cardY + cardHeight) {
+      const relativeX = x - cardStartX;
+      let cardIndex = Math.floor(relativeX / cardSpacing) + startCardIndex;
+      
+      if (cardIndex >= startCardIndex && 
+          cardIndex < Math.min(startCardIndex + maxVisibleCards, currentHand.length) && 
+          relativeX >= 0) {
+        newHoveredCardIndex = cardIndex;
+      }
+    }
+    
+    // Check deck card (top-right)
+    const deckCardX = 700;
+    const deckCardY = 80;
+    if (x >= deckCardX && x <= deckCardX + cardWidth &&
+        y >= deckCardY && y <= deckCardY + cardHeight) {
+      newHoveredDeckCard = true;
+    }
+    
+    // Only redraw if hover state changed
+    if (newHoveredCardIndex !== hoveredCardIndex || newHoveredDeckCard !== hoveredDeckCard) {
+      hoveredCardIndex = newHoveredCardIndex;
+      hoveredDeckCard = newHoveredDeckCard;
+      drawGameState();
+    }
+  }
+
+  // Handle click on canvas
+  function sendCardMove(e) {
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    // Card dimensions
+    const cardWidth = 80;
+    const cardHeight = 120;
+    const cardSpacing = 90;
+    const cardStartX = 20;
+    const cardY = 280;
+    
+    // Deck card position
+    const deckCardX = 700;
+    const deckCardY = 80;
+    
+    // Check if clicked on a card in hand
+    if (y >= cardY && y <= cardY + cardHeight) {
+      const relativeX = x - cardStartX;
+      const cardIndex = Math.floor(relativeX / cardSpacing) + startCardIndex;
+      
+      if (cardIndex >= startCardIndex && 
+          cardIndex < Math.min(startCardIndex + maxVisibleCards, currentHand.length) && 
+          relativeX >= 0) {
+        
+        writeToScreen(`Playing card ${cardIndex + 1}: ${currentHand[cardIndex].rank} of ${currentHand[cardIndex].suit}`);
+        
+        if (websocket && websocket.readyState === WebSocket.OPEN) {
+          // Send move information
+          const playerId = parseInt(localStorage.getItem("playerId")) || 1;
+          const action = 1;  // Play card action
+          
+          // Get card suit index
+          let suitIndex = 0;
+          for (const [key, value] of Object.entries(Suit)) {
+            if (value === currentHand[cardIndex].suit) {
+              suitIndex = parseInt(key);
+              break;
+            }
+          }
+          
+          // Get card rank index
+          let rankIndex = 0;
+          for (const [key, value] of Object.entries(Rank)) {
+            if (value === currentHand[cardIndex].rank) {
+              rankIndex = parseInt(key);
+              break;
+            }
+          }
+          
+          sendMove(playerId, action, suitIndex, rankIndex, currentHand.length, cardIndex);
+        } else {
+          // For testing: simulate card played by removing it from hand
+          simulateCardPlayed(cardIndex);
+        }
+      }
+    }
+    
+    // Check if clicked on deck card
+    if (x >= deckCardX && x <= deckCardX + cardWidth &&
+        y >= deckCardY && y <= deckCardY + cardHeight) {
+      
+      writeToScreen("Drawing card from deck");
+      
+      if (websocket && websocket.readyState === WebSocket.OPEN) {
+        // Send draw card action
+        const playerId = parseInt(localStorage.getItem("playerId")) || 1;
+        const action = 2;  // Draw card action
+        sendMove(playerId, action, 0, 0, currentHand.length, -1);
+      } else {
+        // For testing: simulate drawing a card
+        simulateDrawCard();
+      }
+    }
+  }
+
+  // Simulate card played (for testing)
+  function simulateCardPlayed(cardIndex) {
+    // Update field card with the played card
+    fieldCard = {...currentHand[cardIndex]};
+    
+    // Remove card from hand
+    currentHand.splice(cardIndex, 1);
+    
+    // Adjust startCardIndex if needed
+    if (startCardIndex > 0 && startCardIndex >= currentHand.length - maxVisibleCards + 1) {
+      startCardIndex = Math.max(0, currentHand.length - maxVisibleCards);
+    }
+    
+    // Save to localStorage
+    saveGameState();
+    
+    // Redraw
+    drawGameState();
+  }
+
+  // Simulate drawing a card (for testing)
+  function simulateDrawCard() {
+    // Create a random card
+    const ranks = Object.values(Rank);
+    const suits = Object.values(Suit);
+    const actions = Object.values(Action);
+    
+    const randomRank = ranks[Math.floor(Math.random() * ranks.length)];
+    const randomSuit = suits[Math.floor(Math.random() * suits.length)];
+    const randomAction = Math.random() < 0.2 ? 
+                        actions[Math.floor(Math.random() * (actions.length - 1)) + 1] : 
+                        'NONE';
+    
+    // Add to hand
+    currentHand.push({
+      rank: randomRank,
+      suit: randomSuit,
+      action: randomAction
+    });
+    
+    // Save to localStorage
+    saveGameState();
+    
+    // Redraw
+    drawGameState();
+  }
+
+  // Send binary move data to server
+  function sendMove(playerId, actionCode, color, value, handSize, cardIndex) {
+    if (!websocket || websocket.readyState !== WebSocket.OPEN) {
+      writeToScreen("WebSocket not connected. Cannot send move.");
+      return;
+    }
+    
+    let buffer = new ArrayBuffer(6); // 6 bytes (added cardIndex)
+    let view = new DataView(buffer);
+    view.setUint8(0, playerId);
+    view.setUint8(1, actionCode);
+    view.setUint8(2, color);
+    view.setInt8(3, value);
+    view.setUint8(4, handSize);
+    view.setInt8(5, cardIndex);
+    websocket.send(buffer);
+    
+    writeToScreen(`Sent move: Player ${playerId}, Action ${actionCode}, Color ${color}, Value ${value}, Card Index ${cardIndex}`);
+  }
+  
+  // WebSocket event handlers
+  function onOpen(e) {
+    writeToScreen("Connected to server");
+  }
+
+  function onClose(e) {
+    writeToScreen("Disconnected from server");
+  }
+
+  function onError(e) {
+    writeToScreen("Error: " + (e.data || "WebSocket error"));
+  }
+
+  // Process binary message from server
+  function onMessage(event) {
+    const buffer = event.data;
+    const dv = new DataView(buffer);
+    let offset = 0;
+
+    // Parse game ID (Uint16, little-endian)
+    const gameId = dv.getUint16(offset, true);
+    offset += 2;
+
+    // Parse player ID (Uint8)
+    const playerId = dv.getUint8(offset);
+    offset += 1;
+
+    // Parse hand size (Uint8)
+    const handSize = dv.getUint8(offset);
+    offset += 1;
+    
+    // Parse field card (3 bytes)
+    // const fieldRankValue = dv.getUint8(offset); offset += 1;
+    // const fieldSuitValue = dv.getUint8(offset); offset += 1;
+    // const fieldActionValue = dv.getUint8(offset); offset += 1;
+    
+    // fieldCard = {
+    //   rank: Rank[fieldRankValue] || fieldRankValue.toString(),
+    //   suit: Suit[fieldSuitValue] || fieldSuitValue.toString(),
+    //   action: Action[fieldActionValue] || "NONE"
+    // }; //TODO fix this to parse field card
+
+    // Parse cards in hand
+    currentHand = [];
+    for (let i = 0; i < handSize; i++) {
+      const rankValue = dv.getUint8(offset); offset += 1;
+      const suitValue = dv.getUint8(offset); offset += 1;
+      const actionValue = dv.getUint8(offset); offset += 1;
+
+      currentHand.push({
+        rank: Rank[rankValue] || rankValue.toString(),
+        suit: Suit[suitValue] || suitValue.toString(),
+        action: Action[actionValue] || "NONE"
+      });
+    }
+    // console.log({ gameId, playerId, hand });
+    // Save to localStorage
+    localStorage.setItem("playerId", playerId);
+    localStorage.setItem("gameId", gameId);
+    saveGameState();
+
+    writeToScreen(`Received game data: Game ID: ${gameId}, Player ID: ${playerId}, Hand size: ${currentHand.length}`);
+    
+    // Draw the game state
+    drawGameState();
+  }
+  
+  // Save current game state to localStorage
+  function saveGameState() {
+    // Save hand
+    const handCompactStr = currentHand.map(card => {
+      let rankVal = card.rank;
+      for (const [key, value] of Object.entries(Rank)) {
+        if (value === card.rank) {
+          rankVal = key;
+          break;
+        }
+      }
+      
+      let suitVal = card.suit;
+      for (const [key, value] of Object.entries(Suit)) {
+        if (value === card.suit) {
+          suitVal = key;
+          break;
+        }
+      }
+      
+      let actionVal = 0;
+      for (const [key, value] of Object.entries(Action)) {
+        if (value === card.action) {
+          actionVal = key;
+          break;
+        }
+      }
+      
+      return `${rankVal}-${suitVal}-${actionVal}`;
+    }).join(",");
+    
+    localStorage.setItem("hand", handCompactStr);
+    
+    // Save field card
+    if (fieldCard) {
+      let rankVal = fieldCard.rank;
+      for (const [key, value] of Object.entries(Rank)) {
+        if (value === fieldCard.rank) {
+          rankVal = key;
+          break;
+        }
+      }
+      
+      let suitVal = fieldCard.suit;
+      for (const [key, value] of Object.entries(Suit)) {
+        if (value === fieldCard.suit) {
+          suitVal = key;
+          break;
+        }
+      }
+      
+      let actionVal = 0;
+      for (const [key, value] of Object.entries(Action)) {
+        if (value === fieldCard.action) {
+          actionVal = key;
+          break;
+        }
+      }
+      
+      const fieldCardCompactStr = `${rankVal}-${suitVal}-${actionVal}`;
+      localStorage.setItem("fieldCard", fieldCardCompactStr);
+    }
+  }
+
+  // Display message in output div
+  function writeToScreen(message) {
+    var p = document.createElement("p");
+    p.style.margin = "2px 0";
+    p.innerHTML = `<strong>${new Date().toLocaleTimeString()}</strong>: ${message}`;
+    
+    if (output) {
+      output.appendChild(p);
+      output.scrollTop = output.scrollHeight; // Auto-scroll to bottom
+    } else {
+      console.log(message);
+    }
+  }
+
+  // Card drawing functions
+  const suitColors = {
+    'HEARTS': 'red',
+    'DIAMONDS': 'red',
+    'CLUBS': 'black',
+    'SPADES': 'black'
+  };
+
+  const suitSymbols = {
+    'HEARTS': '♥',
+    'DIAMONDS': '♦',
+    'CLUBS': '♣',
+    'SPADES': '♠'
+  };
+
+  // Draw a single card
+  function drawCard(card, x, y, isHighlighted = false) {
+    if (!ctx) return;
+    
+    // Draw card background with optional highlight
+    if (isHighlighted) {
+      // Draw green border for highlighted card
+      ctx.fillStyle = 'white';
+      ctx.strokeStyle = '#00cc00';
+      ctx.lineWidth = 4;
+    } else {
+      ctx.fillStyle = 'white';
+      ctx.strokeStyle = 'black';
+      ctx.lineWidth = 2;
+    }
+    
+    ctx.fillRect(x, y, 80, 120);
+    ctx.strokeRect(x, y, 80, 120);
+
+    // Set color based on suit
+    const color = suitColors[card.suit] || 'gray';
+    const symbol = suitSymbols[card.suit] || card.suit;
+    
+    // Draw rank and suit
+    ctx.fillStyle = color;
+    ctx.font = 'bold 16px Arial';
+    ctx.fillText(`${card.rank}`, x + 8, y + 20);
+    
+    // Draw suit symbol
+    ctx.font = 'bold 24px Arial';
+    ctx.fillText(symbol, x + 8, y + 50);
+    
+    // Draw in center
+    ctx.font = 'bold 32px Arial';
+    ctx.fillText(symbol, x + 30, y + 75);
+
+    // Draw action if any
+    if (card.action !== 'NONE') {
+      ctx.fillStyle = 'blue';
+      ctx.font = '12px Arial';
+      ctx.fillText(card.action, x + 8, y + 110);
+    }
+  }
+  
+  // Draw card back (for deck)
+  function drawCardBack(x, y, isHighlighted = false) {
+    if (!ctx) return;
+    
+    // Draw card outline with optional highlight
+    if (isHighlighted) {
+      ctx.strokeStyle = '#00cc00';
+      ctx.lineWidth = 4;
+    } else {
+      ctx.strokeStyle = 'black';
+      ctx.lineWidth = 2;
+    }
+    
+    ctx.fillStyle = '#2255aa'; // Blue background for card back
+    ctx.fillRect(x, y, 80, 120);
+    ctx.strokeRect(x, y, 80, 120);
+    
+    // Draw pattern on card back
+    ctx.fillStyle = '#112244';
+    ctx.beginPath();
+    for (let i = 0; i < 8; i++) {
+      for (let j = 0; j < 12; j++) {
+        if ((i + j) % 2 === 0) {
+          ctx.fillRect(x + 10 + i * 8, y + 10 + j * 8, 6, 6);
+        }
+      }
+    }
+    ctx.closePath();
+    
+    // Draw text on card back
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 16px Arial';
+    ctx.fillText("DECK", x + 20, y + 65);
+  }
+
+  // Draw the entire game state (field card, deck, and player hand)
+  function drawGameState() {
+    if (!ctx) {
+      console.error("Canvas context not available");
+      return;
+    }
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw field card (middle top)
+    ctx.fillStyle = 'black';
+    ctx.font = '16px Arial';
+    ctx.fillText("Field Card:", 350, 65);
+    
+    if (fieldCard) {
+      drawCard(fieldCard, 350, 80);
+    } else {
+      ctx.fillText("No field card yet", 350, 120);
+    }
+    
+    // Draw deck card (top right)
+    ctx.fillStyle = 'black';
+    ctx.font = '16px Arial';
+    ctx.fillText("Draw Deck:", 700, 65);
+    drawCardBack(700, 80, hoveredDeckCard);
+    
+    // Draw player's hand
+    ctx.fillStyle = 'black';
+    ctx.font = '16px Arial';
+    ctx.fillText("Your Hand:", 20, 265);
+    
+    if (currentHand && currentHand.length) {
+      // Show visible portion of hand based on startCardIndex
+      const visibleCards = Math.min(maxVisibleCards, currentHand.length - startCardIndex);
+      
+      for (let i = 0; i < visibleCards; i++) {
+        const cardIndex = startCardIndex + i;
+        drawCard(
+          currentHand[cardIndex], 
+          20 + i * 90, 
+          280, 
+          cardIndex === hoveredCardIndex
+        );
+      }
+      
+      // Draw navigation indicators if needed
+      if (currentHand.length > maxVisibleCards) {
+        ctx.fillStyle = 'black';
+        ctx.font = '14px Arial';
+        ctx.fillText(`Cards ${startCardIndex + 1}-${startCardIndex + visibleCards} of ${currentHand.length}`, 20, 430);
+        
+        // Left arrow
+        if (startCardIndex > 0) {
+          ctx.fillText("◄ Previous cards", 20, 450);
+        }
+        
+        // Right arrow
+        if (startCardIndex + maxVisibleCards < currentHand.length) {
+          ctx.fillText("More cards ►", 150, 450);
+        }
+      }
+    } else {
+      ctx.fillText("No cards in hand", 20, 320);
+    }
+  }
+
+  function testSimulateMessage() {
+    // Create a sample binary message similar to what the server would send
+    const sampleHandSize = 8; // More cards to test scrolling
+    const buffer = new ArrayBuffer(2 + 1 + 1 + 3 + (sampleHandSize * 3)); // Added 3 bytes for field card
+    const view = new DataView(buffer);
+    
+    // Game ID (2 bytes)
+    view.setUint16(0, 42, true);
+    
+    // Player ID (1 byte)
+    view.setUint8(2, 7);
+    
+    // Hand size (1 byte)
+    view.setUint8(3, sampleHandSize);
+    
+    // Field card (3 bytes: rank, suit, action)
+    view.setUint8(4, 10); // 10
+    view.setUint8(5, 3);  // Spades
+    view.setUint8(6, 0);  // No action
+    
+    // Cards (3 bytes each: rank, suit, action)
+    let offset = 7;
+    
+    // Card 1: King of Hearts
+    view.setUint8(offset++, 13); // King
+    view.setUint8(offset++, 0);  // Hearts
+    view.setUint8(offset++, 0);  // No action
+    
+    // Card 2: 5 of Diamonds
+    view.setUint8(offset++, 5);  // 5
+    view.setUint8(offset++, 1);  // Diamonds
+    view.setUint8(offset++, 0);  // No action
+    
+    // Card 3: Jack of Clubs with Skip
+    view.setUint8(offset++, 11); // Jack
+    view.setUint8(offset++, 2);  // Clubs
+    view.setUint8(offset++, 1);  // Skip action
+    
+    // Card 4: Ace of Spades
+    view.setUint8(offset++, 14); // Ace
+    view.setUint8(offset++, 3);  // Spades
+    view.setUint8(offset++, 0);  // No action
+    
+    // Card 5: 9 of Hearts
+    view.setUint8(offset++, 9);  // 9
+    view.setUint8(offset++, 0);  // Hearts
+    view.setUint8(offset++, 0);  // No action
+    
+    // Card 6: Queen of Diamonds
+    view.setUint8(offset++, 12); // Queen
+    view.setUint8(offset++, 1);  // Diamonds
+    view.setUint8(offset++, 0);  // No action
+    
+    // Card 7: 2 of Clubs with Draw Two
+    view.setUint8(offset++, 2);  // 2
+    view.setUint8(offset++, 2);  // Clubs
+    view.setUint8(offset++, 3);  // Draw Two action
+    
+    // Card 8: 7 of Spades
+    view.setUint8(offset++, 7);  // 7
+    view.setUint8(offset++, 3);  // Spades
+    view.setUint8(offset++, 0);  // No action
+    
+    // Process this fake message
+    onMessage({data: buffer});
+  }
+
+  // Register event listeners when page loads
+  window.addEventListener("load", init, false);
+  window.addEventListener("DOMContentLoaded", function() {
+    // Canvas click handler
+    const canvasElement = document.getElementById("gameCanvas");
+    if (canvasElement) {
+      canvasElement.addEventListener("click", sendCardMove);
+    }
+    
+    // Test button handlers
+    document.getElementById("testDrawBtn").addEventListener("click", function() {
+      drawExampleHand();
+    });
+    
+    document.getElementById("testMsgBtn").addEventListener("click", function() {
+      testSimulateMessage();
+    });
+  });
+</script>
+</head>
+
+<body>
+  <h2>Macau Card Game</h2>
+  
+  <div id="output"></div>
+  
+  <div>
+    <button id="testDrawBtn">Test Draw Example</button>
+    <button id="testMsgBtn">Test Simulate Message</button>
+  </div>
+  
+  <canvas id="gameCanvas" width="800" height="470" style="border:1px solid #000000;"></canvas>
+  
+  <div id="cardNavigationControls">
+    <button id="prevCards">◄ Previous Cards</button>
+    <button id="nextCards">More Cards ►</button>
+  </div>
+  
+  <div style="margin-top: 20px;">
+    <h3>Instructions:</h3>
+    <ul>
+      <li>Click on a card in your hand to play it</li>
+      <li>Click on the deck to draw a card if you can't play</li>
+      <li>Use the navigation buttons to view more cards if you have more than 7</li>
+      <li>Green highlight shows which card you're about to play</li>

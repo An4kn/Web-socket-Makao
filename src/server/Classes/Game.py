@@ -55,7 +55,7 @@ class Game:
     def create_deck(self):
         for suit in Suit:
             for rank in Rank:
-                card = Card(rank=rank, suit=suit, action=Action.NONE)  # lub domyślnie action=NONE
+                card = Card(rank=rank, suit=suit, allowed=False)  # lub domyślnie action=NONE
                 self.deck.append(card)
 
         random.shuffle(self.deck)

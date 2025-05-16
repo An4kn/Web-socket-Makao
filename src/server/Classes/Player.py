@@ -7,7 +7,7 @@ class Player:
         """Initialize player with an ID and an empty hand."""
         self.player_id = player_id
         self.hand = []
-        # deck?
+        # deck? 
 
     def draw(self, game):
         """Draw a card from the deck."""

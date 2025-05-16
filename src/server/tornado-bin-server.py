@@ -13,11 +13,7 @@ class EchoHandler(tornado.websocket.WebSocketHandler):
     players = {}
 
     def open(self):
-        print("open") #moze nawet wopen w sumie xd
-        # player_id = max(self.players.keys(), default=0) + 1
-        # game_id = max(self.games.keys(), default=0) + 1
-
-        # response_format = "<BH"  # B - unsigned byte dla player_id, H - unsigned short dla game_id (dostosuj format!)
+        print("open") #moze nawet wopen w sumie
         game, player = ManageGame(self.players, self.games)
         # response_data = struct.pack(response_format, player_id, game_id)
         # self.write_message(response_data, binary=True)
