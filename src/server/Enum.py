@@ -21,7 +21,7 @@ class Suit(Enum):
     CLUBS = 2
     SPADES = 3
 
-class Action(Enum):
+class Client_send_action(Enum):
     FIRST_PLAYER_INITIALIZATION = 0
     SECOND_PLAYER_INITIALIZATION = 1
     PLAYER_CLICK = 2

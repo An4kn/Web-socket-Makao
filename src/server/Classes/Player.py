@@ -25,17 +25,38 @@ class Player:
         for _ in range(count):
             self.draw(game)
         """Draw `count` cards from the deck and add them to the player's hand."""
+
+    def set_playable_cards(self,top_card,penalty = 0):
+        # if penalty > 0:
+        #     for card in self.hand:
+        #         if card.suit == top_card.suit or card.rank == top_card.rank:
+        #             card.allowed = True
+        #         else:
+        #             card.allowed = False
+        #     return self.hand
+        for card in self.hand:
+            if card.suit == top_card.suit or card.rank == top_card.rank:
+                card.allowed = True
+            else:
+                card.allowed = False
+        return self.hand        
    
-    def to_binary_with_game_info(self, game_id):
+    def to_binary_with_game_info(self, game,your_turn):
         data = bytearray()
-        data.extend(struct.pack("<H", game_id))           # 2 bajty
+        data.extend(struct.pack("<H", game.game_id))           # 2 bajty
         data.append(self.player_id)                       # 1 bajt
         data.append(len(self.hand))                       # 1 bajt
-
+        data.append(your_turn)                            # 1 bajt - TODO: to change this is allowed filed
+        
+        data.append(game.top_card.rank.value)
+        data.append(game.top_card.suit.value)
+        data.append(game.top_card.allowed)
+                                # 1 bajt - TODO: to change this is allowed filed
+     
         for card in self.hand:
             data.append(card.rank.value)
             data.append(card.suit.value)
-            data.append(card.action.value)
+            data.append(card.allowed) #TODO to change this is allowed filed
             # print(f"Card: {card}, Rank Value: {card.rank.value}, Suit Value: {card.suit.value}, Action Value: {card.action.value}")
         return bytes(data)
 

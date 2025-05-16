@@ -13,15 +13,14 @@ class EchoHandler(tornado.websocket.WebSocketHandler):
     players = {}
 
     def open(self):
-        print("open") #moze nawet wopen w sumie
-        game, player = ManageGame(self.players, self.games)
-        # response_data = struct.pack(response_format, player_id, game_id)
-        # self.write_message(response_data, binary=True)
-        binary_data = player.to_binary_with_game_info(game.game_id)
-        self.write_message(binary_data, binary=True)
+        # print("open") #moze nawet wopen w sumie
+        # game, player = ManageGame(self.players, self.games)
         
-        print(f"Client connected. Player ID: {player.player_id}, Game ID: {game.game_id}, and the hand {player.hand} (sent to client)")
-
+        # binary_data = player.to_binary_with_game_info(game.game_id)
+        # self.write_message(binary_data, binary=True)
+        
+        # print(f"Client connected. Player ID: {player.player_id}, Game ID: {game.game_id}, and the hand {player.hand} (sent to client)")
+        pass
     def on_close(self):
         print("close")
 
@@ -33,11 +32,30 @@ class EchoHandler(tornado.websocket.WebSocketHandler):
     # 	self.write_message(data, binary=True)
 
     def on_message(self, message):
-        if len(message) != 5:
-            print(f"Invalid message length: {len(message)} bytes")
-            return
-        player_id, action, color, value, hand_size = struct.unpack("BBBBB", message)
-        print(f"Player {player_id} did action {action}, card: {color}-{value}, hand size: {hand_size}")
+        # if len(message) != 6:
+        #     print(f"Invalid message length: {len(message)} bytes")
+        #     return
+        print(f"Received message: {message}")
+        if len(message) == 1: #initialization'
+            
+            # first_player_initialization = struct.unpack("B", message)
+            youturn = 0
+            if len(self.players) % 2 == 0:
+                print("First player initialization")
+            else:
+                youturn = 1
+                print("Second player initialization")
+
+            game, player = ManageGame(self.players, self.games)
+        
+            binary_data = player.to_binary_with_game_info(game,youturn)
+            self.write_message(binary_data, binary=True)
+            
+            print(f"Client connected. Player ID: {player.player_id}, Game ID: {game.game_id}, and the hand {player.hand} (sent to client)")
+        if len(message) == 5:
+            
+            player_id, action, color, value, hand_size = struct.unpack("BBBBB", message)
+            print(f"Player {player_id} did action {action}, card: {color}-{value}, hand size: {hand_size}")
         # ManageGame(self.players, self.games)
     # id sesji
     # inicjalizacja

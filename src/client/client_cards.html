@@ -67,6 +67,7 @@
   var ctx;
   var websocket;
   var currentHand = [];
+  var yourTurn;
   var fieldCard = null;
   var startCardIndex = 0; // For scrolling through cards
   var maxVisibleCards = 7; // Maximum number of cards visible at once
@@ -118,7 +119,7 @@
     // Add event listeners for navigation buttons
     document.getElementById('prevCards').addEventListener('click', () => {
       if (startCardIndex > 0) {
-        startCardIndex--;
+        startCardIndex   --;
         drawGameState();
       }
     });
@@ -157,7 +158,7 @@
         drawExampleHand();
       }
       
-      // Load saved game state from localStorage
+      // Load saved game state from sessionStorage
       loadSavedGameState();
     } else {
       console.error("Canvas element not found!");
@@ -165,39 +166,42 @@
   }
   
   // Show example hand when connection fails
-  function drawExampleHand() {
-    writeToScreen("Using example hand data");
+//   function drawExampleHand() {
+//     writeToScreen("Using example hand data");
     
-    // Example field card
-    fieldCard = {
-      rank: 'KING',
-      suit: 'HEARTS',
-      action: 'NONE'
-    };
+//     // Example field card
+//     fieldCard = {
+//       rank: 'KING',
+//       suit: 'HEARTS',
+//       action: 'NONE'
+//     };
     
-    // Example hand with more than 7 cards to test scrolling
-    currentHand = [
-      { rank: '7', suit: 'HEARTS', action: 'NONE' },
-      { rank: 'JACK', suit: 'CLUBS', action: 'SKIP' },
-      { rank: '10', suit: 'DIAMONDS', action: 'NONE' },
-      { rank: 'ACE', suit: 'SPADES', action: 'NONE' },
-      { rank: '5', suit: 'HEARTS', action: 'NONE' },
-      { rank: 'QUEEN', suit: 'DIAMONDS', action: 'NONE' },
-      { rank: '9', suit: 'CLUBS', action: 'NONE' },
-      { rank: '2', suit: 'SPADES', action: 'DRAW_TWO' },
-      { rank: '8', suit: 'HEARTS', action: 'NONE' },
-      { rank: '3', suit: 'DIAMONDS', action: 'NONE' }
-    ];
+//     // Example hand with more than 7 cards to test scrolling
+//     currentHand = [
+//       { rank: '7', suit: 'HEARTS', action: 'NONE' },
+//       { rank: 'JACK', suit: 'CLUBS', action: 'SKIP' },
+//       { rank: '10', suit: 'DIAMONDS', action: 'NONE' },
+//       { rank: 'ACE', suit: 'SPADES', action: 'NONE' },
+//       { rank: '5', suit: 'HEARTS', action: 'NONE' },
+//       { rank: 'QUEEN', suit: 'DIAMONDS', action: 'NONE' },
+//       { rank: '9', suit: 'CLUBS', action: 'NONE' },
+//       { rank: '2', suit: 'SPADES', action: 'DRAW_TWO' },
+//       { rank: '8', suit: 'HEARTS', action: 'NONE' },
+//       { rank: '3', suit: 'DIAMONDS', action: 'NONE' }
+//     ];
     
-    drawGameState();
-  }
+//     drawGameState();
+//   }
   
-  // Load and draw any game state saved in localStorage
+  // Load and draw any game state saved in sessionStorage
   function loadSavedGameState() {
-    const playerId = localStorage.getItem("playerId");
-    const gameId = localStorage.getItem("gameId");
-    const handCompactStr = localStorage.getItem("hand");
-    const fieldCardCompactStr = localStorage.getItem("fieldCard");
+    const playerId = sessionStorage.getItem("playerId");
+    const gameId = sessionStorage.getItem("gameId");
+    const handCompactStr = sessionStorage.getItem("hand");
+    const fieldCardCompactStr = sessionStorage.getItem("topCard");
+    yourTurn = sessionStorage.getItem("yourTurn");
+
+    // console.log(fieldCardCompactStr);
     
     if (handCompactStr) {
       writeToScreen(`Loaded from storage: Game ID: ${gameId}, Player ID: ${playerId}`);//dziwny cudzysłów
@@ -217,14 +221,14 @@
         }
         
         // Load field card if available
-        if (fieldCardCompactStr) {
-          const [rankVal, suitVal, actionVal] = fieldCardCompactStr.split("-").map(Number);
-          fieldCard = {
-            rank: Rank[rankVal] || rankVal.toString(),
-            suit: Suit[suitVal] || suitVal.toString(),
-            action: Action[actionVal] || "NONE"
-          };
-        }
+        // if (fieldCardCompactStr) {
+        //   const [rankVal, suitVal, actionVal] = fieldCardCompactStr.split("-").map(Number);
+        //   fieldCard = {
+        //     rank: Rank[rankVal] || rankVal.toString(),
+        //     suit: Suit[suitVal] || suitVal.toString(),
+        //     action: Action[actionVal] || "NONE"
+        //   };
+        // }
         
         // Draw the game state
         if (currentHand.length > 0) {
@@ -312,7 +316,7 @@
         
         if (websocket && websocket.readyState === WebSocket.OPEN) {
           // Send move information
-          const playerId = parseInt(localStorage.getItem("playerId")) || 1;
+          const playerId = parseInt(sessionStorage.getItem("playerId")) || 1;
           const action = 1;  // Play card action
           
           // Get card suit index
@@ -349,62 +353,63 @@
       
       if (websocket && websocket.readyState === WebSocket.OPEN) {
         // Send draw card action
-        const playerId = parseInt(localStorage.getItem("playerId")) || 1;
+        const playerId = parseInt(sessionStorage.getItem("playerId")) || 1;
         const action = 2;  // Draw card action
         sendMove(playerId, action, 0, 0, currentHand.length, -1);
-      } else {
+      } 
+    //   else {
         // For testing: simulate drawing a card
-        simulateDrawCard();
-      }
+        // simulateDrawCard();
+    //   }
     }
   }
 
-  // Simulate card played (for testing)
-  function simulateCardPlayed(cardIndex) {
-    // Update field card with the played card
-    fieldCard = {...currentHand[cardIndex]};
+//   // Simulate card played (for testing)
+//   function simulateCardPlayed(cardIndex) {
+//     // Update field card with the played card
+//     fieldCard = {...currentHand[cardIndex]};
     
-    // Remove card from hand
-    currentHand.splice(cardIndex, 1);
+//     // Remove card from hand
+//     currentHand.splice(cardIndex, 1);
     
-    // Adjust startCardIndex if needed
-    if (startCardIndex > 0 && startCardIndex >= currentHand.length - maxVisibleCards + 1) {
-      startCardIndex = Math.max(0, currentHand.length - maxVisibleCards);
-    }
+//     // Adjust startCardIndex if needed
+//     if (startCardIndex > 0 && startCardIndex >= currentHand.length - maxVisibleCards + 1) {
+//       startCardIndex = Math.max(0, currentHand.length - maxVisibleCards);
+//     }
     
-    // Save to localStorage
-    saveGameState();
+//     // Save to sessionStorage
+//     saveGameState();
     
-    // Redraw
-    drawGameState();
-  }
+//     // Redraw
+//     drawGameState();
+//   }
 
-  // Simulate drawing a card (for testing)
-  function simulateDrawCard() {
-    // Create a random card
-    const ranks = Object.values(Rank);
-    const suits = Object.values(Suit);
-    const actions = Object.values(Action);
+//   // Simulate drawing a card (for testing)
+//   function simulateDrawCard() {
+//     // Create a random card
+//     const ranks = Object.values(Rank);
+//     const suits = Object.values(Suit);
+//     const actions = Object.values(Action);
     
-    const randomRank = ranks[Math.floor(Math.random() * ranks.length)];
-    const randomSuit = suits[Math.floor(Math.random() * suits.length)];
-    const randomAction = Math.random() < 0.2 ? 
-                        actions[Math.floor(Math.random() * (actions.length - 1)) + 1] : 
-                        'NONE';
+//     const randomRank = ranks[Math.floor(Math.random() * ranks.length)];
+//     const randomSuit = suits[Math.floor(Math.random() * suits.length)];
+//     const randomAction = Math.random() < 0.2 ? 
+//                         actions[Math.floor(Math.random() * (actions.length - 1)) + 1] : 
+//                         'NONE';
     
-    // Add to hand
-    currentHand.push({
-      rank: randomRank,
-      suit: randomSuit,
-      action: randomAction
-    });
+//     // Add to hand
+//     currentHand.push({
+//       rank: randomRank,
+//       suit: randomSuit,
+//       action: randomAction
+//     });
     
-    // Save to localStorage
-    saveGameState();
+//     // Save to sessionStorage
+//     saveGameState();
     
-    // Redraw
-    drawGameState();
-  }
+//     // Redraw
+//     drawGameState();
+//   }
 
   // Send binary move data to server
   function sendMove(playerId, actionCode, color, value, handSize, cardIndex) {
@@ -412,15 +417,20 @@
       writeToScreen("WebSocket not connected. Cannot send move.");
       return;
     }
+    console.log("Your turn???", yourTurn);
+    if (yourTurn == 0) {
+      writeToScreen("Not your turn to play.");
+      return;
+    }
     
-    let buffer = new ArrayBuffer(6); // 6 bytes (added cardIndex)
+    let buffer = new ArrayBuffer(5); // 6 bytes (added cardIndex)
     let view = new DataView(buffer);
     view.setUint8(0, playerId);
     view.setUint8(1, actionCode);
     view.setUint8(2, color);
     view.setInt8(3, value);
     view.setUint8(4, handSize);
-    view.setInt8(5, cardIndex);
+    // view.setInt8(5, cardIndex);
     websocket.send(buffer);
     
     writeToScreen(`Sent move: Player ${playerId}, Action ${actionCode}, Color ${color}, Value ${value}, Card Index ${cardIndex}`);
@@ -428,6 +438,12 @@
   
   // WebSocket event handlers
   function onOpen(e) {
+    if (sessionStorage.getItem("playerId") == null) {
+        writeToScreen("Connected to server");
+        connect_to_server_first_time(e);
+    } else {
+        writeToScreen(`Reconnected as Player ID: ${sessionStorage.getItem("playerId")}`);
+    }
     writeToScreen("Connected to server");
   }
 
@@ -437,6 +453,12 @@
 
   function onError(e) {
     writeToScreen("Error: " + (e.data || "WebSocket error"));
+  }
+  function connect_to_server_first_time(event){
+    let buffer = new ArrayBuffer(1); // 6 bytes (added cardIndex)
+    let view = new DataView(buffer);
+    view.setUint8(0, 0);
+    websocket.send(buffer);
   }
 
   // Process binary message from server
@@ -456,6 +478,21 @@
     // Parse hand size (Uint8)
     const handSize = dv.getUint8(offset);
     offset += 1;
+
+    yourTurn = dv.getUint8(offset);
+    offset += 1;
+
+    console.log("yourTurn:", yourTurn);
+
+    const rankValue = dv.getUint8(offset); offset += 1;
+      const suitValue = dv.getUint8(offset); offset += 1;
+      const actionValue = dv.getUint8(offset); offset += 1;
+      topCard = {
+        rank: Rank[rankValue] || rankValue.toString(),
+        suit: Suit[suitValue] || suitValue.toString(),
+        action: Action[actionValue] || "NONE" // TODO fix this to parse field card
+      };
+    console.log("iam", topCard);
     
     // Parse field card (3 bytes)
     // const fieldRankValue = dv.getUint8(offset); offset += 1;
@@ -481,20 +518,23 @@
         action: Action[actionValue] || "NONE"
       });
     }
+    console.log(currentHand);
     // console.log({ gameId, playerId, hand });
-    // Save to localStorage
-    localStorage.setItem("playerId", playerId);
-    localStorage.setItem("gameId", gameId);
-    saveGameState();
+    // Save to sessionStorage
+    sessionStorage.setItem("playerId", playerId);
+    sessionStorage.setItem("gameId", gameId);
+    // sessionStorage.setItem("topCard", topCard);
+    sessionStorage.setItem("yourTurn", yourTurn);
+    saveGameState(topCard);
 
-    writeToScreen(`Received game data: Game ID: ${gameId}, Player ID: ${playerId}, Hand size: ${currentHand.length}`);
+    writeToScreen(`Received game data: Game ID: ${gameId}, Player ID: ${playerId}, Hand size: ${currentHand.length}, Your turn: ${yourTurn}, Top card: ${topCard}`);
     
     // Draw the game state
     drawGameState();
   }
   
-  // Save current game state to localStorage
-  function saveGameState() {
+  // Save current game state to sessionStorage
+  function saveGameState(topCard) {
     // Save hand
     const handCompactStr = currentHand.map(card => {
       let rankVal = card.rank;
@@ -523,22 +563,23 @@
       
       return `${rankVal}-${suitVal}-${actionVal}`;
     }).join(",");
+    console.log(handCompactStr);
     
-    localStorage.setItem("hand", handCompactStr);
+    sessionStorage.setItem("hand", handCompactStr);
     
     // Save field card
-    if (fieldCard) {
-      let rankVal = fieldCard.rank;
+    if (topCard) { //TODO moze jednak zrobic globalne ale zobacze jeszcze
+      let rankVal = topCard.rank;
       for (const [key, value] of Object.entries(Rank)) {
-        if (value === fieldCard.rank) {
+        if (value === topCard.rank) {
           rankVal = key;
           break;
         }
       }
       
-      let suitVal = fieldCard.suit;
+      let suitVal = topCard.suit;
       for (const [key, value] of Object.entries(Suit)) {
-        if (value === fieldCard.suit) {
+        if (value === topCard.suit) {
           suitVal = key;
           break;
         }
@@ -546,14 +587,17 @@
       
       let actionVal = 0;
       for (const [key, value] of Object.entries(Action)) {
-        if (value === fieldCard.action) {
+        if (value === topCard.action) {
           actionVal = key;
           break;
         }
       }
       
       const fieldCardCompactStr = `${rankVal}-${suitVal}-${actionVal}`;
-      localStorage.setItem("fieldCard", fieldCardCompactStr);
+      writeToScreen(`Saved field card: ${fieldCardCompactStr}`);
+      console.log(fieldCardCompactStr);
+      console.log("test");
+      sessionStorage.setItem("topCard", fieldCardCompactStr);
     }
   }
 
@@ -606,6 +650,7 @@
     ctx.strokeRect(x, y, 80, 120);
 
     // Set color based on suit
+    console.log(card);
     const color = suitColors[card.suit] || 'gray';
     const symbol = suitSymbols[card.suit] || card.suit;
     
@@ -678,12 +723,25 @@
     ctx.fillStyle = 'black';
     ctx.font = '16px Arial';
     ctx.fillText("Field Card:", 350, 65);
+
+    const fieldCardCompactStr = sessionStorage.getItem("topCard");
+    // if (fieldCard) {??????/
+        // Load field card if available
+        if (fieldCardCompactStr) {
+          const [rankVal, suitVal, actionVal] = fieldCardCompactStr.split("-").map(Number);
+          fieldCard = {
+            rank: Rank[rankVal] || rankVal.toString(),
+            suit: Suit[suitVal] || suitVal.toString(),
+            action: Action[actionVal] || "NONE"
+          };
+        }
+        
+    writeToScreen(`Loaded field card: ${fieldCardCompactStr}`);
     
-    if (fieldCard) {
-      drawCard(fieldCard, 350, 80);
-    } else {
-      ctx.fillText("No field card yet", 350, 120);
-    }
+    drawCard(fieldCard, 350, 80);//TODO wtf
+    // } else {
+    //   ctx.fillText("No field card yet", 350, 120);
+    // }
     
     // Draw deck card (top right)
     ctx.fillStyle = 'black';
@@ -731,72 +789,72 @@
     }
   }
 
-  function testSimulateMessage() {
-    // Create a sample binary message similar to what the server would send
-    const sampleHandSize = 8; // More cards to test scrolling
-    const buffer = new ArrayBuffer(2 + 1 + 1 + 3 + (sampleHandSize * 3)); // Added 3 bytes for field card
-    const view = new DataView(buffer);
+//   function testSimulateMessage() {
+//     // Create a sample binary message similar to what the server would send
+//     const sampleHandSize = 8; // More cards to test scrolling
+//     const buffer = new ArrayBuffer(2 + 1 + 1 + 3 + (sampleHandSize * 3)); // Added 3 bytes for field card
+//     const view = new DataView(buffer);
     
-    // Game ID (2 bytes)
-    view.setUint16(0, 42, true);
+//     // Game ID (2 bytes)
+//     view.setUint16(0, 42, true);
     
-    // Player ID (1 byte)
-    view.setUint8(2, 7);
+//     // Player ID (1 byte)
+//     view.setUint8(2, 7);
     
-    // Hand size (1 byte)
-    view.setUint8(3, sampleHandSize);
+//     // Hand size (1 byte)
+//     view.setUint8(3, sampleHandSize);
     
-    // Field card (3 bytes: rank, suit, action)
-    view.setUint8(4, 10); // 10
-    view.setUint8(5, 3);  // Spades
-    view.setUint8(6, 0);  // No action
+//     // Field card (3 bytes: rank, suit, action)
+//     view.setUint8(4, 10); // 10
+//     view.setUint8(5, 3);  // Spades
+//     view.setUint8(6, 0);  // No action
     
-    // Cards (3 bytes each: rank, suit, action)
-    let offset = 7;
+//     // Cards (3 bytes each: rank, suit, action)
+//     let offset = 7;
     
-    // Card 1: King of Hearts
-    view.setUint8(offset++, 13); // King
-    view.setUint8(offset++, 0);  // Hearts
-    view.setUint8(offset++, 0);  // No action
+//     // Card 1: King of Hearts
+//     view.setUint8(offset++, 13); // King
+//     view.setUint8(offset++, 0);  // Hearts
+//     view.setUint8(offset++, 0);  // No action
     
-    // Card 2: 5 of Diamonds
-    view.setUint8(offset++, 5);  // 5
-    view.setUint8(offset++, 1);  // Diamonds
-    view.setUint8(offset++, 0);  // No action
+//     // Card 2: 5 of Diamonds
+//     view.setUint8(offset++, 5);  // 5
+//     view.setUint8(offset++, 1);  // Diamonds
+//     view.setUint8(offset++, 0);  // No action
     
-    // Card 3: Jack of Clubs with Skip
-    view.setUint8(offset++, 11); // Jack
-    view.setUint8(offset++, 2);  // Clubs
-    view.setUint8(offset++, 1);  // Skip action
+//     // Card 3: Jack of Clubs with Skip
+//     view.setUint8(offset++, 11); // Jack
+//     view.setUint8(offset++, 2);  // Clubs
+//     view.setUint8(offset++, 1);  // Skip action
     
-    // Card 4: Ace of Spades
-    view.setUint8(offset++, 14); // Ace
-    view.setUint8(offset++, 3);  // Spades
-    view.setUint8(offset++, 0);  // No action
+//     // Card 4: Ace of Spades
+//     view.setUint8(offset++, 14); // Ace
+//     view.setUint8(offset++, 3);  // Spades
+//     view.setUint8(offset++, 0);  // No action
     
-    // Card 5: 9 of Hearts
-    view.setUint8(offset++, 9);  // 9
-    view.setUint8(offset++, 0);  // Hearts
-    view.setUint8(offset++, 0);  // No action
+//     // Card 5: 9 of Hearts
+//     view.setUint8(offset++, 9);  // 9
+//     view.setUint8(offset++, 0);  // Hearts
+//     view.setUint8(offset++, 0);  // No action
     
-    // Card 6: Queen of Diamonds
-    view.setUint8(offset++, 12); // Queen
-    view.setUint8(offset++, 1);  // Diamonds
-    view.setUint8(offset++, 0);  // No action
+//     // Card 6: Queen of Diamonds
+//     view.setUint8(offset++, 12); // Queen
+//     view.setUint8(offset++, 1);  // Diamonds
+//     view.setUint8(offset++, 0);  // No action
     
-    // Card 7: 2 of Clubs with Draw Two
-    view.setUint8(offset++, 2);  // 2
-    view.setUint8(offset++, 2);  // Clubs
-    view.setUint8(offset++, 3);  // Draw Two action
+//     // Card 7: 2 of Clubs with Draw Two
+//     view.setUint8(offset++, 2);  // 2
+//     view.setUint8(offset++, 2);  // Clubs
+//     view.setUint8(offset++, 3);  // Draw Two action
     
-    // Card 8: 7 of Spades
-    view.setUint8(offset++, 7);  // 7
-    view.setUint8(offset++, 3);  // Spades
-    view.setUint8(offset++, 0);  // No action
+//     // Card 8: 7 of Spades
+//     view.setUint8(offset++, 7);  // 7
+//     view.setUint8(offset++, 3);  // Spades
+//     view.setUint8(offset++, 0);  // No action
     
-    // Process this fake message
-    onMessage({data: buffer});
-  }
+//     // Process this fake message
+//     onMessage({data: buffer});
+//   }
 
   // Register event listeners when page loads
   window.addEventListener("load", init, false);

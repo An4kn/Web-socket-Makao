@@ -1,6 +1,6 @@
 import random
 from .Card import Card
-from Enum import Rank, Suit, Action
+from Enum import Rank, Suit, Client_send_action
 
 
 
@@ -16,6 +16,8 @@ class Game:
         self.game_over = False
         self.current_player_id = 0
         self.game_is_ready = False
+        self.top_card = None
+        self.battle_count = 0
 
     def add_player(self, player):
         """Adds a player to the game."""
@@ -104,5 +106,32 @@ class Game:
                 self.game_over = True
                 return True
         return False
+    
+    def allow_card_to_play(self, card):
+        """Checks if a card can be played."""
+        # if self.game_over:
+        #     return False #TODO maybe later
+        
+        top_card = self.played_cards[-1]
+        
+        # Card must match the top card either by color or value
+        if card.suit == top_card.suit or card.rank == top_card.rank:
+            return True
+        
+        return False
+    
+    def init_top_card(self):
+        for card in self.deck:
+            self.top_card = card
+            self.deck.remove(card)
+            if self.top_card.rank in [Rank.FIVE, Rank.SIX, Rank.SEVEN, Rank.EIGHT, Rank.NINE, Rank.TEN,Rank.QUEEN]:#zobaczymy czy dokonczymy implementencacje                 
+                break
+        print(f"Top card initialized: {self.top_card}")
+        print(f"Top card initialized: {self.deck[-1]}")
+
+
+
+        
+
 
 

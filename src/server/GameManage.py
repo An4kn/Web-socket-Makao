@@ -5,21 +5,23 @@ from Classes.Game import Game
 from Classes.Player import Player
 
 
-
 def ManageGame(players, games, player_id=-1,game_id=-1,init_game=True): # moze id -1??
     #trzeba sprawdzic czy ninicjalizacja?????
     if init_game: #to juz po inizjalizacji gra się zaczyna
         #to jest po rozpoczęciu gry
         game, player = FindGame(games, players)
+        game.init_top_card()
+        player.set_playable_cards(game.top_card)
+        print("Ręka gracza 1:", player.hand)
+        print("Karty w grze:", game.deck)
+        print("Gracze w grze:", game.players)
+      
+        print(f"top_card ?: {game.top_card}")
     else:
         pass #TODO: handle game logic
     
     # game.add_player("Player 1")
-    print("Ręka gracza 1:", player.hand)
-    print("Karty w grze:", game.deck)
-    print("Gracze w grze:", game.players)
-    print("Liczba graczy:", len(players))
-    print("Liczba gier:", len(games))
+    
 
     return game, player
 
