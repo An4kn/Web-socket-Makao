@@ -37,9 +37,19 @@ class Player:
         for card in self.hand:
             if card.suit == top_card.suit or card.rank == top_card.rank:
                 card.allowed = True
+                print(f"Card {card} is allowed")
             else:
                 card.allowed = False
-        return self.hand        
+        return self.hand
+    
+    def delete_card_from_hand(self,game, color,value):
+        """Remove a card from the player's hand."""
+        print(f"Deleting card {color}-{value} from hand")
+        for card in self.hand:
+            if card.color == color and card.value == value:
+                game.top_card = card
+                self.hand.remove(card)
+                break        
    
     def to_binary_with_game_info(self, game,your_turn):
         data = bytearray()

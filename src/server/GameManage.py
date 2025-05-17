@@ -4,8 +4,20 @@ from Classes.Game import Game
 # from .Classes.GameManager import GameManager
 from Classes.Player import Player
 
+def CreateMove(players,games,player_id, game_id, color, value):
+    #usuniecie karty z deck players
+    player = players[player_id]
+    game = games[game_id]
+    player.delete_card_from_hand(game,color, value)
+    
+def BroadcastToSendingPlayer(players, games, player_id, game_id):
+    pass
 
-def ManageGame(players, games, player_id=-1,game_id=-1,init_game=True): # moze id -1??
+def BroadcastToSecondPlayer(players, games, player_id, game_id):
+    pass
+
+
+def FirstConnection(players, games, player_id=-1,game_id=-1,init_game=True): # moze id -1??
     #trzeba sprawdzic czy ninicjalizacja?????
     if init_game: #to juz po inizjalizacji gra się zaczyna
         #to jest po rozpoczęciu gry
@@ -40,11 +52,10 @@ def FindGame(games,players):
         else:
             print("Gra już istnieje, dodajemy gracza")
     
-    player = Add_player(players, game) 
+    player = AddPlayer(players, game) 
     
     return game, player
     # Game already exists, handle accordingly
-
         
 def GameInit(games):
     # New game moze byc enumem tak jak reszta
@@ -62,7 +73,7 @@ def GameInit(games):
     # game.start_game()
     return game
 
-def Add_player(players, game):
+def AddPlayer(players, game):
     player_id = max(players.keys(), default=0) + 1
     player = Player(player_id)
     players[player_id] = player # tutaj chyba append?

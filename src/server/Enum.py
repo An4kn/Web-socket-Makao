@@ -26,3 +26,7 @@ class Client_send_action(Enum):
     SECOND_PLAYER_INITIALIZATION = 1
     PLAYER_CLICK = 2
 
+class Server_send_action(Enum):
+    NORMAL_MOVE = 0
+    PLAYER_ = 1
+

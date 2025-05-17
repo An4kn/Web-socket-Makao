@@ -4,7 +4,7 @@ import tornado.ioloop
 import struct
 
 # Assuming ManageGame is a function in the GameManage module
-from GameManage import ManageGame
+from GameManage import FirstConnection, CreateMove
 
 
 class EchoHandler(tornado.websocket.WebSocketHandler):
@@ -39,30 +39,39 @@ class EchoHandler(tornado.websocket.WebSocketHandler):
         if len(message) == 1: #initialization'
             
             # first_player_initialization = struct.unpack("B", message)
-            youturn = 0
+            yourturn = 0
             if len(self.players) % 2 == 0:
                 print("First player initialization")
             else:
-                youturn = 1
+                yourturn = 1
                 print("Second player initialization")
 
-            game, player = ManageGame(self.players, self.games)
+            game, player = FirstConnection(self.players, self.games)
         
-            binary_data = player.to_binary_with_game_info(game,youturn)
+            binary_data = player.to_binary_with_game_info(game,yourturn)
             self.write_message(binary_data, binary=True)
             
             print(f"Client connected. Player ID: {player.player_id}, Game ID: {game.game_id}, and the hand {player.hand} (sent to client)")
-        if len(message) == 5:
+        
+        if len(message) == 2:
+            # player_click = struct.unpack("BB", message)
+            # print(f"Player clicked: {player_click}")
+            player_id, game_id = struct.unpack("BB", message)
+            # print(f"Player ID: {player_id}, Game ID: {game_id}")
+            # ManageGame(self.players, self.games, player_id, game_id)
+        if len(message) == 4:
             
-            player_id, action, color, value, hand_size = struct.unpack("BBBBB", message)
-            print(f"Player {player_id} did action {action}, card: {color}-{value}, hand size: {hand_size}")
+            player_id, game_id, color, value = struct.unpack("BBBB", message)
+            CreateMove(self.players, self.games, player_id, game_id, color, value)
+            
+            print(f"Player {player_id} did action , card: {color}-{value}, hand size: ")
+
         # ManageGame(self.players, self.games)
     # id sesji
     # inicjalizacja
     
     def check_origin(self, origin):
         return True
-
 
 if __name__ == "__main__":
     app = tornado.web.Application([
