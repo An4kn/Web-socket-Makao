@@ -42,22 +42,22 @@ class Player:
                 card.allowed = False
         return self.hand
     
-    def delete_card_from_hand(self,game, color,value):
+    def delete_card_from_hand(self,game, card_to_remove):
         """Remove a card from the player's hand."""
-        print(f"Deleting card {color}-{value} from hand")
+        # print(f"Deleting card {card_to_remove.color}-{card_to_remove.value} from hand")
         for card in self.hand:
-            if card.color == color and card.value == value:
-                game.top_card = card
+            if card.rank == card_to_remove.rank and card.suit == card_to_remove.suit:
+                game.top_card = card_to_remove
                 self.hand.remove(card)
-                break        
+                break
    
-    def to_binary_with_game_info(self, game,your_turn):
+    def to_binary_with_game_info(self, game,your_turn,draw_card_allowed=True):
         data = bytearray()
-        data.extend(struct.pack("<H", game.game_id))           # 2 bajty
+        data.extend(struct.pack("<H", game.game_id))         # 2 bajty TODO odwrotnie trzeba to zrobic
         data.append(self.player_id)                       # 1 bajt
         data.append(len(self.hand))                       # 1 bajt
         data.append(your_turn)                            # 1 bajt - TODO: to change this is allowed filed
-        
+        data.append(draw_card_allowed)                  # 1 bajt - TODO: to change this is allowed filed
         data.append(game.top_card.rank.value)
         data.append(game.top_card.suit.value)
         data.append(game.top_card.allowed)
@@ -67,6 +67,8 @@ class Player:
             data.append(card.rank.value)
             data.append(card.suit.value)
             data.append(card.allowed) #TODO to change this is allowed filed
+        
+      # Padding byte to ensure even length, if needed
             # print(f"Card: {card}, Rank Value: {card.rank.value}, Suit Value: {card.suit.value}, Action Value: {card.action.value}")
         return bytes(data)
 

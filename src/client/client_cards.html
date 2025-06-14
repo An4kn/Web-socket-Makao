@@ -172,7 +172,7 @@
     const handCompactStr = sessionStorage.getItem("hand");
     // const fieldCardCompactStr = sessionStorage.getItem("topCard"); //TODO not needed I think
     yourTurn = sessionStorage.getItem("yourTurn");
-    
+    console.log("yourTurn---:=====", yourTurn);
     if (handCompactStr) {
       writeToScreen(`Loaded from storage: Game ID: ${gameId}, Player ID: ${playerId}`);//dziwny cudzysłów      
       
@@ -267,7 +267,6 @@
         writeToScreen(`Playing card ${cardIndex + 1}: ${currentHand[cardIndex].rank} of ${currentHand[cardIndex].suit}`);
         
         if (websocket && websocket.readyState === WebSocket.OPEN) {
-          // Send move information
           
           const action = 1;  // Play card action
           
@@ -312,26 +311,41 @@
         y >= deckCardY && y <= deckCardY + cardHeight) {
       
       writeToScreen("Drawing card from deck");
+      draw_card_allowed = sessionStorage.getItem("draw_card_allowed");
       
       if (websocket && websocket.readyState === WebSocket.OPEN) {
         // Send draw card action
         const action = 2;  // Draw card action
-        sendDrawDeck(playerId,gameId);
+        if (draw_card_allowed == 1) {
+          sendDrawCard(playerId,gameId);
+        } else {
+          writeToScreen("You are not allowed to draw a card at this time.");
+        }
       }
     }
   }
-  function sendDrawDeck(playerId,gameId){
+  function sendDrawCard(playerId,gameId){
     if (!ItIsYourTurn()){
       return;
     }
     yourTurn = 0;
     sessionStorage.setItem("yourTurn", yourTurn);
+    console.log("yourTurn:----", yourTurn);
 
+    let buffer = new ArrayBuffer(3); // 6 bytes (added cardIndex)
+    let view = new DataView(buffer);
+    view.setUint8(0, 1);
+    view.setUint8(1, playerId);
+    view.setUint8(2, gameId);
+    websocket.send(buffer);
+  }
 
+  function Reconnect(){
     let buffer = new ArrayBuffer(2); // 6 bytes (added cardIndex)
     let view = new DataView(buffer);
-    view.setUint8(0, playerId);
-    view.setUint8(1, gameId);
+    view.setUint8(0, 1); // 1 for reconnect
+    playerId = sessionStorage.getItem("playerId");
+    view.setUint8(1, playerId);
     websocket.send(buffer);
   }
 
@@ -360,6 +374,7 @@
     const handCompactStr = SerializeCardDataArray();
 
     console.log(handCompactStr);
+    sessionStorage.setItem("playerID", playerId);
     sessionStorage.setItem("hand", handCompactStr);
     // topCard = null;
     
@@ -388,10 +403,10 @@
   function onOpen(e) {
     if (sessionStorage.getItem("playerId") == null) {
         writeToScreen("Connected to server");
-        connect_to_server_first_time(e);
+        connect_to_server(e);
     } else {
         writeToScreen(`Reconnected as Player ID: ${sessionStorage.getItem("playerId")}`);
-    }
+        Reconnect()    }
     writeToScreen("Connected to server");
   }
 
@@ -399,10 +414,10 @@
     writeToScreen("Disconnected from server");
   }
 
-  function onError(e) {
+  function onError(e,value) {
     writeToScreen("Error: " + (e.data || "WebSocket error"));
   }
-  function connect_to_server_first_time(event){
+  function connect_to_server(event){ // TODO moze enum tutaj
     let buffer = new ArrayBuffer(1); // 6 bytes (added cardIndex)
     let view = new DataView(buffer);
     view.setUint8(0, 0);
@@ -431,6 +446,12 @@
     offset += 1;
 
     console.log("yourTurn:", yourTurn);
+
+    draw_card_allowed = dv.getUint8(offset);
+    offset += 1;
+
+    sessionStorage.setItem("draw_card_allowed", draw_card_allowed);
+    writeToScreen(`Draw card allowed: ${draw_card_allowed}`);
 
     const rankValue = dv.getUint8(offset); offset += 1;
       const suitValue = dv.getUint8(offset); offset += 1;

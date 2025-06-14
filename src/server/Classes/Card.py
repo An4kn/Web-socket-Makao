@@ -8,3 +8,4 @@ class Card:
 
     def __repr__(self):
         return f"{self.rank} of {self.suit}" + (f" (Action: {self.allowed})" if self.allowed else "")
+   

@@ -37,23 +37,7 @@ class Game:
         
         # Place an initial card
         self.played_cards.append(self.deck.draw_card())
-    # def draw_card(self):
-
-    # def create_deck(self):
-    #     suits = ['Hearts', 'Diamonds', 'Clubs', 'Spades']  # Kolory
-    #     ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King', 'Ace']  # Wartości kart
-    #     # deck = []
-
-    #     # Tworzenie talii
-    #     for suit in suits:
-    #         for rank in ranks:
-    #             card = Card.Card(suit, rank)
-    #             self.deck.append(card)
-
-    #     # Potasowanie talii
-    #     random.shuffle(self.deck)
-    #     print("Talia kart:", self.deck)  # Debugging line
-    #     # return deck?
+  
     def create_deck(self):
         for suit in Suit:
             for rank in Rank:
@@ -123,11 +107,14 @@ class Game:
     def init_top_card(self):
         for card in self.deck:
             self.top_card = card
-            self.deck.remove(card)
+            self.deck.remove(card) #trigger do usuniecia karty z decka??
             if self.top_card.rank in [Rank.FIVE, Rank.SIX, Rank.SEVEN, Rank.EIGHT, Rank.NINE, Rank.TEN,Rank.QUEEN]:#zobaczymy czy dokonczymy implementencacje                 
                 break
         print(f"Top card initialized: {self.top_card}")
         print(f"Top card initialized: {self.deck[-1]}")
+    def drew_deck(self,player):
+        # pl
+        return self.deck.remove(self.deck[-1])
 
 
 

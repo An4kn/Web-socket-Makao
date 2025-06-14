@@ -3,26 +3,62 @@ from Classes.Game import Game
 # import Game"???
 # from .Classes.GameManager import GameManager
 from Classes.Player import Player
+from Classes.Card import Card
+from Enum import Rank, Suit, Client_send_action
 
-def CreateMove(players,games,player_id, game_id, color, value):
+def GetCardFromDeck(players, games, player_id, game_id):
+    player = players[player_id]
+    game = games[game_id]
+    player.draw_cards(game,1)
+    player.set_playable_cards(game.top_card)
+    return player, game
+
+def PlayerCanDoAMove(player):
+    for card in player.hand:
+        if card.allowed:
+            return True
+    return False
+
+def CreateMove(players,games,player_id, game_id, color, value,connections):
     #usuniecie karty z deck players
     player = players[player_id]
     game = games[game_id]
-    player.delete_card_from_hand(game,color, value)
+    card_to_remove = CreateCard(color, value)
+    player.delete_card_from_hand(game,card_to_remove)
+    BroadcastToSecondPlayer(games, player_id, game_id,connections)
+
+def BroadcastToSecondPlayer(games, sending_player_id, game_id, connections):
+    game = games[game_id]
+    player = FindSecondPlayer(games, sending_player_id, game_id)
+    player.set_playable_cards(game.top_card)
+    binary_data = player.to_binary_with_game_info(game,1)
+    connections[player.player_id].write_message(binary_data, binary=True)
     
+def FindSecondPlayer(games, player_id, game_id):
+    game = games[game_id]
+    for player in game.players:
+        if player.player_id != player_id:
+            return player
+    raise Exception("Second player not found") #TODO to usunac pozniej jakby cos sie stalo
+
 def BroadcastToSendingPlayer(players, games, player_id, game_id):
     pass
 
-def BroadcastToSecondPlayer(players, games, player_id, game_id):
-    pass
+def CreateCard(color, value):
+    rank = Rank(value)
+    suit = Suit(color)
+    allowed = False
+    card = Card(rank, suit,allowed)
+    return card
+    
 
-
-def FirstConnection(players, games, player_id=-1,game_id=-1,init_game=True): # moze id -1??
+def FirstConnection(players, games, yourturn,player_id=-1,game_id=-1,init_game=True): # moze id -1??
     #trzeba sprawdzic czy ninicjalizacja?????
     if init_game: #to juz po inizjalizacji gra się zaczyna
         #to jest po rozpoczęciu gry
         game, player = FindGame(games, players)
-        game.init_top_card()
+        if yourturn == 0:
+            game.init_top_card()
         player.set_playable_cards(game.top_card)
         print("Ręka gracza 1:", player.hand)
         print("Karty w grze:", game.deck)

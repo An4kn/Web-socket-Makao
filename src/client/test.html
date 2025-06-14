@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Pamięci Przeglądarki</title>
+</head>
+<body>
+    <h1>Test LocalStorage</h1>
+    <button onclick="zapiszID()">1. Zapisz ID</button>
+    <button onclick="odczytajID()">2. Odczytaj ID (po odświeżeniu)</button>
+    <p>Wynik: <span id="wynik"></span></p>
+
+    <script>
+        function zapiszID() {
+            const testID = 'gracz_12345';
+            sessionStorage.setItem('test_id', testID);
+            document.getElementById('wynik').innerText = 'Zapisano ID: ' + testID;
+            console.log('Zapisano ID:', testID);
+        }
+
+        function odczytajID() {
+            const wczytaneID = sessionStorage.getItem('test_id');
+            document.getElementById('wynik').innerText = 'Odczytano ID: ' + wczytaneID;
+            console.log('Odczytano ID:', wczytaneID);
+        }
+    </script>
+</body>
+</html>
