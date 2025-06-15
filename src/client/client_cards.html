@@ -66,15 +66,14 @@
   var canvas;
   var ctx;
   var websocket;
-  var currentHand = []; //moze dodac nazwe global?
+  var currentHand = [];
   var yourTurn;
   var fieldCard = null;
-  var startCardIndex = 0; // For scrolling through cards
-  var maxVisibleCards = 7; // Maximum number of cards visible at once
-  var hoveredCardIndex = -1; // Track which card is being hovered
-  var hoveredDeckCard = false; // Track if deck card is being hovered
+  var startCardIndex = 0;
+  var maxVisibleCards = 7;
+  var hoveredCardIndex = -1;
+  var hoveredDeckCard = false;
 
-  // Maps for conversion between enum values and display text
   const Rank = {
     2: '2',
     3: '3',
@@ -116,7 +115,6 @@
       console.error("Canvas element not found");
     }
     
-    // Add event listeners for navigation buttons
     document.getElementById('prevCards').addEventListener('click', () => {
       if (startCardIndex > 0) {
         startCardIndex   --;
@@ -131,11 +129,9 @@
       }
     });
     
-    // Add mouse move listener for highlighting
     canvas.addEventListener('mousemove', handleMouseMove);
   });
 
-  // Initialize WebSocket connection and UI elements
   function init() {
     output = document.getElementById("output");
     canvas = document.getElementById("gameCanvas");
@@ -143,7 +139,6 @@
     if (canvas) {
       ctx = canvas.getContext("2d");
       
-      // Try to connect to WebSocket server
       try {
         websocket = new WebSocket("ws://localhost:8000/ws");
         websocket.binaryType = "arraybuffer";
@@ -154,28 +149,21 @@
       } catch (e) {
         writeToScreen("WebSocket error: " + e.message);
         
-        // If connection fails, draw example hand
         drawExampleHand();
       }
       
-      // Load saved game state from sessionStorage
       loadSavedGameState();
     } else {
       console.error("Canvas element not found!");
     }
   }
   
-  // Load and draw any game state saved in sessionStorage
   function loadSavedGameState() {
     const playerId = sessionStorage.getItem("playerId");
     const gameId = sessionStorage.getItem("gameId");
     const handCompactStr = sessionStorage.getItem("hand");
-    // const fieldCardCompactStr = sessionStorage.getItem("topCard"); //TODO not needed I think
     yourTurn = sessionStorage.getItem("yourTurn");
-    console.log("yourTurn---:=====", yourTurn);
-    if (handCompactStr) {
-      writeToScreen(`Loaded from storage: Game ID: ${gameId}, Player ID: ${playerId}`);//dziwny cudzysłów      
-      
+    if (handCompactStr) {      
       try {
         DeserializeCardDataArray(handCompactStr);
         
@@ -189,25 +177,20 @@
     }
   }
   
-
-  // Handle mouse movement for highlighting cards
   function handleMouseMove(e) {
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     
-    // Check for hover on player cards
     const cardWidth = 80;
     const cardSpacing = 90;
     const cardStartX = 20;
     const cardY = 280;
     const cardHeight = 120;
     
-    // Reset hover states
     let newHoveredCardIndex = -1;
     let newHoveredDeckCard = false;
     
-    // Check player cards
     if (y >= cardY && y <= cardY + cardHeight) {
       const relativeX = x - cardStartX;
       let cardIndex = Math.floor(relativeX / cardSpacing) + startCardIndex;
@@ -219,7 +202,6 @@
       }
     }
     
-    // Check deck card (top-right)
     const deckCardX = 700;
     const deckCardY = 80;
     if (x >= deckCardX && x <= deckCardX + cardWidth &&
@@ -227,7 +209,6 @@
       newHoveredDeckCard = true;
     }
     
-    // Only redraw if hover state changed
     if (newHoveredCardIndex !== hoveredCardIndex || newHoveredDeckCard !== hoveredDeckCard) {
       hoveredCardIndex = newHoveredCardIndex;
       hoveredDeckCard = newHoveredDeckCard;
@@ -235,27 +216,23 @@
     }
   }
 
-  // Handle click on canvas
   function sendCardMove(e) {
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     
-    // Card dimensions
     const cardWidth = 80;
     const cardHeight = 120;
     const cardSpacing = 90;
     const cardStartX = 20;
     const cardY = 280;
     
-    // Deck card position
     const deckCardX = 700;
     const deckCardY = 80;
 
-    const playerId = parseInt(sessionStorage.getItem("playerId")) || 1;//TODO tutaj jeszczze trzeba sprawdzic
+    const playerId = parseInt(sessionStorage.getItem("playerId")) || 1;
     const gameId = parseInt(sessionStorage.getItem("gameId")) || 1;
     
-    // Check if clicked on a card in hand
     if (y >= cardY && y <= cardY + cardHeight) {
       const relativeX = x - cardStartX;
       const cardIndex = Math.floor(relativeX / cardSpacing) + startCardIndex;
@@ -263,14 +240,11 @@
       if (cardIndex >= startCardIndex && 
           cardIndex < Math.min(startCardIndex + maxVisibleCards, currentHand.length) && 
           relativeX >= 0) {
-        
-        writeToScreen(`Playing card ${cardIndex + 1}: ${currentHand[cardIndex].rank} of ${currentHand[cardIndex].suit}`);
-        
+                
         if (websocket && websocket.readyState === WebSocket.OPEN) {
           
-          const action = 1;  // Play card action
+          const action = 1;
           
-          // Get card suit index
           let suitIndex = 0;
           for (const [key, value] of Object.entries(Suit)) {
             if (value === currentHand[cardIndex].suit) {
@@ -279,7 +253,6 @@
             }
           }
           
-          // Get card rank index
           let rankIndex = 0;
           for (const [key, value] of Object.entries(Rank)) {
             if (value === currentHand[cardIndex].rank) {
@@ -295,9 +268,7 @@
               break;
             }
            }
-          
-          // TODO check if card is allowed to be played
-          
+                    
           sendMove(playerId,gameId, allowedIndex, suitIndex, rankIndex, currentHand.length, cardIndex,currentHand);
         }
       }
@@ -306,16 +277,14 @@
     if (x >= deckCardX && x <= deckCardX + cardWidth &&
         y >= deckCardY && y <= deckCardY + cardHeight) {
       
-      writeToScreen("Drawing card from deck");
       draw_card_allowed = sessionStorage.getItem("draw_card_allowed");
       
       if (websocket && websocket.readyState === WebSocket.OPEN) {
-        // Send draw card action
-        const action = 2;  // Draw card action
+        const action = 2;
         if (draw_card_allowed == 1) {
           sendDrawCard(playerId,gameId);
         } else {
-          writeToScreen("You are not allowed to draw a card at this time.");
+          writeToScreen("Not allowed to play this card.");
         }
       }
     }
@@ -326,9 +295,8 @@
     }
     yourTurn = 0;
     sessionStorage.setItem("yourTurn", yourTurn);
-    console.log("yourTurn:----", yourTurn);
 
-    let buffer = new ArrayBuffer(3); // 6 bytes (added cardIndex)
+    let buffer = new ArrayBuffer(3);
     let view = new DataView(buffer);
     view.setUint8(0, 1);
     view.setUint8(1, playerId);
@@ -337,27 +305,24 @@
   }
 
   function Reconnect(){
-    let buffer = new ArrayBuffer(2); // 6 bytes (added cardIndex)
+    let buffer = new ArrayBuffer(2);
     let view = new DataView(buffer);
-    view.setUint8(0, 1); // 1 for reconnect
+    view.setUint8(0, 1);
     playerId = sessionStorage.getItem("playerId");
     view.setUint8(1, playerId);
     websocket.send(buffer);
   }
 
-  // Send binary move data to server
   function sendMove(playerId,gameId, allowed, color, value, handSize, cardIndex,currentHand) {
     if (!ItIsYourTurn()){
       return;
     }
-    console.log("allowed=",allowed);
     if(allowed == 0) {
       writeToScreen("Not allowed to play this card.");
       return;
     }
-    //tutaj trzeba usunac karte z reki
     
-    let buffer = new ArrayBuffer(4); // 6 bytes (added cardIndex)
+    let buffer = new ArrayBuffer(4);
     let view = new DataView(buffer);
     view.setUint8(0, playerId);
     view.setUint8(1, gameId);
@@ -365,22 +330,18 @@
     view.setInt8(3, value);
     websocket.send(buffer);
     topCard = { ...currentHand[cardIndex] };
-    // console.log("topcard future?", topCard2);
     currentHand.splice(cardIndex, 1);
     const handCompactStr = SerializeCardDataArray();
 
-    console.log(handCompactStr);
     sessionStorage.setItem("playerID", playerId);
     sessionStorage.setItem("hand", handCompactStr);
-    // topCard = null;
     
     const topCardCompactStr = SerializeCard();
     sessionStorage.setItem("topCard", topCardCompactStr);
     yourTurn = 0;
     sessionStorage.setItem("yourTurn", yourTurn);
     drawGameState()
-    
-    writeToScreen(`Sent move: Player ${playerId}, Action ${allowed}, Color ${color}, Value ${value}, Card Index ${cardIndex}`);
+      
   }
 
   function ItIsYourTurn() {
@@ -395,7 +356,6 @@
     return true;
   }
   
-  // WebSocket event handlers
   function onOpen(e) {
     if (sessionStorage.getItem("playerId") == null) {
         writeToScreen("Connected to server");
@@ -403,7 +363,6 @@
     } else {
         writeToScreen(`Reconnected as Player ID: ${sessionStorage.getItem("playerId")}`);
         Reconnect()    }
-    writeToScreen("Connected to server");
   }
 
   function onClose(e) {
@@ -413,8 +372,8 @@
   function onError(e,value) {
     writeToScreen("Error: " + (e.data || "WebSocket error"));
   }
-  function connect_to_server(event){ // TODO moze enum tutaj
-    let buffer = new ArrayBuffer(1); // 6 bytes (added cardIndex)
+  function connect_to_server(event){
+    let buffer = new ArrayBuffer(1);
     let view = new DataView(buffer);
     view.setUint8(0, 0);
     websocket.send(buffer);
@@ -437,13 +396,10 @@
     yourTurn = dv.getUint8(offset);
     offset += 1;
 
-    console.log("yourTurn:", yourTurn);
-
     draw_card_allowed = dv.getUint8(offset);
     offset += 1;
 
     sessionStorage.setItem("draw_card_allowed", draw_card_allowed);
-    writeToScreen(`Draw card allowed: ${draw_card_allowed}`);
 
     const rankValue = dv.getUint8(offset); offset += 1;
       const suitValue = dv.getUint8(offset); offset += 1;
@@ -451,9 +407,8 @@
       topCard = {
         rank: Rank[rankValue] || rankValue.toString(),
         suit: Suit[suitValue] || suitValue.toString(),
-        action: Action[actionValue] || actionValue.toString() // TODO fix this to parse field card
+        action: Action[actionValue] || actionValue.toString()
       };
-    console.log("iam", topCard);
     
     currentHand = [];
     for (let i = 0; i < handSize; i++) {
@@ -467,20 +422,14 @@
         action: Action[actionValue] || actionValue.toString()
       });
     }
-    console.log(currentHand);
 
     sessionStorage.setItem("playerId", playerId);
     sessionStorage.setItem("gameId", gameId);
     sessionStorage.setItem("yourTurn", yourTurn);
-    saveGameState(topCard);
-
-    writeToScreen(`Received game data: Game ID: ${gameId}, Player ID: ${playerId}, Hand size: ${currentHand.length}, Your turn: ${yourTurn}, Top card: ${topCard}`);
-    
-    // Draw the game state
+    saveGameState(topCard);    
     drawGameState();
   }
   
-  // Save current game state to sessionStorage
   function SerializeCardDataArray(){
     const handCompactStr = currentHand.map(card => {
       let rankVal = card.rank;
@@ -522,7 +471,7 @@
         }
   }
   function SerializeCard(){
-    if (topCard) { //TODO moze jednak zrobic globalne ale zobacze jeszcze
+    if (topCard) {
       let rankVal = topCard.rank;
       for (const [key, value] of Object.entries(Rank)) {
         if (value === topCard.rank) {
@@ -566,15 +515,11 @@
   
   function saveGameState(topCard) {
     const handCompactStr = SerializeCardDataArray();
-    console.log(handCompactStr);
     
     sessionStorage.setItem("hand", handCompactStr);
     
     if (topCard) { 
       const fieldCardCompactStr = SerializeCard();
-      writeToScreen(`Saved field card: ${fieldCardCompactStr}`);
-      console.log(fieldCardCompactStr);
-      console.log("test");
       sessionStorage.setItem("topCard", fieldCardCompactStr);
     }
   }
@@ -586,13 +531,10 @@
     
     if (output) {
       output.appendChild(p);
-      output.scrollTop = output.scrollHeight; // Auto-scroll to bottom
-    } else {
-      console.log(message);
+      output.scrollTop = output.scrollHeight;
     }
   }
 
-  // Card drawing functions
   const suitColors = {
     'HEARTS': 'red',
     'DIAMONDS': 'red',
@@ -607,13 +549,10 @@
     'SPADES': '♠'
   };
 
-  // Draw a single card
   function drawCard(card, x, y, isHighlighted = false) {
     if (!ctx) return;
     
-    // Draw card background with optional highlight
     if (isHighlighted) {
-      // Draw green border for highlighted card
       ctx.fillStyle = 'white';
       ctx.strokeStyle = '#00cc00';
       ctx.lineWidth = 4;
@@ -626,25 +565,19 @@
     ctx.fillRect(x, y, 80, 120);
     ctx.strokeRect(x, y, 80, 120);
 
-    // Set color based on suit
-    console.log(card);
     const color = suitColors[card.suit] || 'gray';
     const symbol = suitSymbols[card.suit] || card.suit;
     
-    // Draw rank and suit
     ctx.fillStyle = color;
     ctx.font = 'bold 16px Arial';
     ctx.fillText(`${card.rank}`, x + 8, y + 20);
     
-    // Draw suit symbol
     ctx.font = 'bold 24px Arial';
     ctx.fillText(symbol, x + 8, y + 50);
     
-    // Draw in center
     ctx.font = 'bold 32px Arial';
     ctx.fillText(symbol, x + 30, y + 75);
 
-    // Draw action if any
     if (card.action !== 'NONE') {
       ctx.fillStyle = 'blue';
       ctx.font = '12px Arial';
@@ -652,11 +585,9 @@
     }
   }
   
-  // Draw card back (for deck)
   function drawCardBack(x, y, isHighlighted = false) {
     if (!ctx) return;
     
-    // Draw card outline with optional highlight
     if (isHighlighted) {
       ctx.strokeStyle = '#00cc00';
       ctx.lineWidth = 4;
@@ -665,11 +596,10 @@
       ctx.lineWidth = 2;
     }
     
-    ctx.fillStyle = '#2255aa'; // Blue background for card back
+    ctx.fillStyle = '#2255aa';
     ctx.fillRect(x, y, 80, 120);
     ctx.strokeRect(x, y, 80, 120);
     
-    // Draw pattern on card back
     ctx.fillStyle = '#112244';
     ctx.beginPath();
     for (let i = 0; i < 8; i++) {
@@ -681,13 +611,11 @@
     }
     ctx.closePath();
     
-    // Draw text on card back
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 16px Arial';
     ctx.fillText("DECK", x + 20, y + 65);
   }
 
-  // Draw the entire game state (field card, deck, and player hand)
   function drawGameState() {
     if (!ctx) {
       console.error("Canvas context not available");
@@ -696,31 +624,26 @@
     
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Draw field card (middle top)
     ctx.fillStyle = 'black';
     ctx.font = '16px Arial';
-    ctx.fillText("Field Card:", 350, 65);
+    ctx.fillText("Main Card:", 350, 65);
 
     const fieldCardCompactStr = sessionStorage.getItem("topCard");
     
     DeserializeCard(fieldCardCompactStr);
-
-    writeToScreen(`Loaded field card: ${fieldCardCompactStr}`);
     
-    drawCard(fieldCard, 350, 80);//TODO wtf
+    drawCard(fieldCard, 350, 80);
 
     ctx.fillStyle = 'black';
     ctx.font = '16px Arial';
-    ctx.fillText("Draw Deck:", 700, 65);
+    ctx.fillText("Deck:", 700, 65);
     drawCardBack(700, 80, hoveredDeckCard);
     
-    // Draw player's hand
     ctx.fillStyle = 'black';
     ctx.font = '16px Arial';
     ctx.fillText("Your Hand:", 20, 265);
     
     if (currentHand && currentHand.length) {
-      // Show visible portion of hand based on startCardIndex
       const visibleCards = Math.min(maxVisibleCards, currentHand.length - startCardIndex);
       
       for (let i = 0; i < visibleCards; i++) {
@@ -733,37 +656,31 @@
         );
       }
       
-      // Draw navigation indicators if needed
       if (currentHand.length > maxVisibleCards) {
         ctx.fillStyle = 'black';
         ctx.font = '14px Arial';
         ctx.fillText(`Cards ${startCardIndex + 1}-${startCardIndex + visibleCards} of ${currentHand.length}`, 20, 430);
         
-        // Left arrow
         if (startCardIndex > 0) {
           ctx.fillText("◄ Previous cards", 20, 450);
         }
         
-        // Right arrow
         if (startCardIndex + maxVisibleCards < currentHand.length) {
           ctx.fillText("More cards ►", 150, 450);
         }
       }
     } else {
-      ctx.fillText("No cards in hand", 20, 320);
+      ctx.fillText("You won congratulation", 20, 320);
     }
   }
 
-  // Register event listeners when page loads
   window.addEventListener("load", init, false);
   window.addEventListener("DOMContentLoaded", function() {
-    // Canvas click handler
     const canvasElement = document.getElementById("gameCanvas");
     if (canvasElement) {
       canvasElement.addEventListener("click", sendCardMove);
     }
     
-    // Test button handlers
     document.getElementById("testDrawBtn").addEventListener("click", function() {
       drawExampleHand();
     });
@@ -780,10 +697,6 @@
   
   <div id="output"></div>
   
-  <div>
-    <button id="testDrawBtn">Test Draw Example</button>
-    <button id="testMsgBtn">Test Simulate Message</button>
-  </div>
   
   <canvas id="gameCanvas" width="800" height="470" style="border:1px solid #000000;"></canvas>
   
