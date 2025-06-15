@@ -18,6 +18,7 @@ class Game:
         self.game_is_ready = False
         self.top_card = None
         self.battle_count = 0
+        self.penalty = 0
 
     def add_player(self, player):
         """Adds a player to the game."""
@@ -54,7 +55,15 @@ class Game:
         if self.deck:
             return self.deck.pop()
         else:
-            raise Exception("Deck is empty") # TODO: Handle this case better
+            self.create_deck()
+            
+    def penalty_card(self, card):
+        if card.rank.value == 2:  # Assuming rank 2 is a penalty card
+            self.penalty += 2
+        elif card.rank.value == 3:  # Assuming rank 3 is a penalty card
+            self.penalty += 3
+        elif (card.rank.value == Rank.KING and card.suit == Suit.SPADES) or (card.rank.value == Rank.KING and card.suit == Suit.HEARTS):
+            self.penalty += 5
 
     def next_turn(self):
         """Moves to the next player's turn."""

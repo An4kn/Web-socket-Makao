@@ -14,23 +14,11 @@ class EchoHandler(tornado.websocket.WebSocketHandler):
     connections = {}
 
     def open(self):
-        # print("open") #moze nawet wopen w sumie
-        # game, player = ManageGame(self.players, self.games)
-        
-        # binary_data = player.to_binary_with_game_info(game.game_id)
-        # self.write_message(binary_data, binary=True)
-        
-        # print(f"Client connected. Player ID: {player.player_id}, Game ID: {game.game_id}, and the hand {player.hand} (sent to client)")
         pass
+
     def on_close(self):
         print("close")
 
-    # def on_message(self, message):
-    # 	val = struct.unpack(">hh", message)
-    # 	print("[{},{}]".format(val[0],val[1]))
-    # 	len = math.sqrt(val[0]*val[0]+val[1]*val[1])
-    # 	data = struct.pack(">iif", val[0], val[1], len)
-    # 	self.write_message(data, binary=True)
 
     def on_message(self, message):
         # if len(message) != 6:
@@ -81,9 +69,6 @@ class EchoHandler(tornado.websocket.WebSocketHandler):
             
             print(f"Player {player_id} did action , card: {color}-{value}, hand size: ")
 
-        # ManageGame(self.players, self.games)
-    # id sesji
-    # inicjalizacja
     
     def check_origin(self, origin):#TODO po co to jest?
         return True

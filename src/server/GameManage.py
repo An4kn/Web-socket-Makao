@@ -10,7 +10,7 @@ def GetCardFromDeck(players, games, player_id, game_id):
     player = players[player_id]
     game = games[game_id]
     player.draw_cards(game,1)
-    player.set_playable_cards(game.top_card)
+    player.set_playable_cards(game,True)
     return player, game
 
 def PlayerCanDoAMove(player):
@@ -24,13 +24,14 @@ def CreateMove(players,games,player_id, game_id, color, value,connections):
     player = players[player_id]
     game = games[game_id]
     card_to_remove = CreateCard(color, value)
+    game.penalty_card(card_to_remove)
     player.delete_card_from_hand(game,card_to_remove)
     BroadcastToSecondPlayer(games, player_id, game_id,connections)
 
 def BroadcastToSecondPlayer(games, sending_player_id, game_id, connections):
     game = games[game_id]
     player = FindSecondPlayer(games, sending_player_id, game_id)
-    player.set_playable_cards(game.top_card)
+    player.set_playable_cards(game)
     binary_data = player.to_binary_with_game_info(game,1)
     connections[player.player_id].write_message(binary_data, binary=True)
     
@@ -59,7 +60,7 @@ def FirstConnection(players, games, yourturn,player_id=-1,game_id=-1,init_game=T
         game, player = FindGame(games, players)
         if yourturn == 0:
             game.init_top_card()
-        player.set_playable_cards(game.top_card)
+        player.set_playable_cards(game)
         print("Ręka gracza 1:", player.hand)
         print("Karty w grze:", game.deck)
         print("Gracze w grze:", game.players)

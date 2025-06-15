@@ -299,10 +299,6 @@
           // TODO check if card is allowed to be played
           
           sendMove(playerId,gameId, allowedIndex, suitIndex, rankIndex, currentHand.length, cardIndex,currentHand);
-        } else {
-          // For testing: simulate card played by removing it from hand
-          // console.log("dont now why it is not working");
-          error("dont now why it is not working");
         }
       }
     }
@@ -424,21 +420,17 @@
     websocket.send(buffer);
   }
 
-  // Process binary message from server
   function onMessage(event) {
     const buffer = event.data;
     const dv = new DataView(buffer);
     let offset = 0;
 
-    // Parse game ID (Uint16, little-endian)
     const gameId = dv.getUint16(offset, true);
     offset += 2;
 
-    // Parse player ID (Uint8)
     const playerId = dv.getUint8(offset);
     offset += 1;
 
-    // Parse hand size (Uint8)
     const handSize = dv.getUint8(offset);
     offset += 1;
 
@@ -476,11 +468,9 @@
       });
     }
     console.log(currentHand);
-    // console.log({ gameId, playerId, hand });
-    // Save to sessionStorage
+
     sessionStorage.setItem("playerId", playerId);
     sessionStorage.setItem("gameId", gameId);
-    // sessionStorage.setItem("topCard", topCard);
     sessionStorage.setItem("yourTurn", yourTurn);
     saveGameState(topCard);
 
@@ -580,8 +570,7 @@
     
     sessionStorage.setItem("hand", handCompactStr);
     
-    // Save field card
-    if (topCard) { //TODO moze jednak zrobic globalne ale zobacze jeszcze
+    if (topCard) { 
       const fieldCardCompactStr = SerializeCard();
       writeToScreen(`Saved field card: ${fieldCardCompactStr}`);
       console.log(fieldCardCompactStr);
@@ -590,7 +579,6 @@
     }
   }
 
-  // Display message in output div
   function writeToScreen(message) {
     var p = document.createElement("p");
     p.style.margin = "2px 0";

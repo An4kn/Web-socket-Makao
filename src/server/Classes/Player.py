@@ -1,4 +1,5 @@
 from .Game import Game
+from Enum import Rank, Suit
 import struct
 
 class Player:
@@ -26,14 +27,23 @@ class Player:
             self.draw(game)
         """Draw `count` cards from the deck and add them to the player's hand."""
 
-    def set_playable_cards(self,top_card,penalty = 0):
-        # if penalty > 0:
-        #     for card in self.hand:
-        #         if card.suit == top_card.suit or card.rank == top_card.rank:
-        #             card.allowed = True
-        #         else:
-        #             card.allowed = False
-        #     return self.hand
+    def set_playable_cards(self,game,draw_deck=False):
+        top_card = game.top_card
+        no_cards_can_defend = True
+        if game.penalty > 0:
+            for card in self.hand:
+                if card.rank.value == 2 or card.rank.value == 3 or (card.rank.value == Rank.KING and card.suit in [Suit.SPADES, Suit.HEARTS]):
+                    card.allowed = True
+                    no_cards_can_defend = False
+                else:
+                    card.allowed = False
+                    print(f"Card {card} is allowed due to penalty")
+            if no_cards_can_defend and draw_deck:
+                self.draw_cards(game, game.penalty - 1)
+                game.penalty = 0
+            else:
+                return self.hand
+       
         for card in self.hand:
             if card.suit == top_card.suit or card.rank == top_card.rank:
                 card.allowed = True
@@ -68,34 +78,4 @@ class Player:
             data.append(card.suit.value)
             data.append(card.allowed) #TODO to change this is allowed filed
         
-      # Padding byte to ensure even length, if needed
-            # print(f"Card: {card}, Rank Value: {card.rank.value}, Suit Value: {card.suit.value}, Action Value: {card.action.value}")
         return bytes(data)
-
-    # def _get_rank_value(self, rank):
-    #     ranks_map = {"2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7, "8": 8, "9": 9, "10": 10, "J": 11, "Q": 12, "K": 13, "A": 14}
-    #     return ranks_map.get(rank, 0)
-
-    # def _get_suit_value(self, suit):
-    #     suits_map = {"Hearts": 0, "Diamonds": 1, "Clubs": 2, "Spades": 3}
-    #     return suits_map.get(suit, 0)
-
-    # def _get_action_value(self, action):
-    #     actions_map = {None: 0, "skip": 1, "reverse": 2, "draw 2": 3}
-    #     return actions_map.get(action, 0)
-
-    # def to_binary_with_game_info(self, game_id):
-    #     """Konwertuje obiekt Player i info o grze na binarną reprezentację."""
-    #     game_id_binary = struct.pack("<H", game_id)
-    #     player_id_binary = struct.pack("<B", self.player_id)
-    #     hand_size = len(self.hand)
-    #     hand_size_binary = struct.pack("<B", hand_size)
-    #     hand_binary = b""
-    #     for card in self.hand:
-    #         rank_value = self._get_rank_value(card.rank)
-    #         suit_value = self._get_suit_value(card.suit)
-    #         action_value = self._get_action_value(card.action)
-    #         print(f"Card: {card}, Rank Value: {rank_value}, Suit Value: {suit_value}, Action Value: {action_value}")
-    #         card_binary = struct.pack("<BBB", rank_value, suit_value, action_value)
-    #         hand_binary += card_binary
-    #     return game_id_binary + player_id_binary + hand_size_binary + hand_binary
